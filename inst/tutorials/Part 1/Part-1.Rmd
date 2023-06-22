@@ -134,19 +134,63 @@ This is because many models, including ordinary linear regression, assume that p
 ameshousing %>% 
   ggplot(aes(x = ____)) + 
   geom_histogram(bins = 50) + #for each bin, the number of data points that fall into it are counted (frequency)
-  labs(____ = "Sale Price in $k's",
+  labs(____ = "Sale Price",
        ____ = "Number of Houses sold")
 ```
 
 ```{r selling-price-solution}
 ameshousing %>% 
-  ggplot(aes(x = sale_price/1000)) + 
+  ggplot(aes(x = sale_price)) + 
   geom_histogram(bins = 50) + 
-  labs(x = "Sale Price in $k's",
+  labs(x = "Sale Price",
        y = "Number of Houses sold")
 ```
 
-The **bestNormalize** library can be used to identify the best normalising transformation. We can normalise the outcome variable as this both helps the distribution look more normal and helps keep our error metrics and final predictions easily interpretable. It also means that the errors of predicting the values of inexpensive and expensive houses will affect the prediction equally. We will transform the outcome variable later during the preprocessing steps.
+*Normalization* is an example of a preprocessing step for modeling. The **bestNormalize** library can be used to identify the best normalising transformation. We can normalise the outcome variable as this both helps the distribution look more normal and helps keep our error metrics and final predictions easily interpretable. It also means that the errors of predicting the values of inexpensive and expensive houses will affect the prediction equally.
+
+We will normalize the outcome variable using the **recipes** package, an extensible framework for pipeable sequences of feature engineering steps that provide preprocessing tools to be applied to data. The resulting processed output can be used as inputs for statistical or machine learning models.
+
+**Instructions** Use the `recipe()` function to apply the following preprocessing steps:
+
+-   use the **bestNormalize** package to transform the outcome variable (sale_price);
+
+*The recipe shown below only has one preprocessing step (normalizing, that comes from an extra add-on package called bestNormalize), but you can implement many steps on one dataset during preprocessing*
+
+```{r bestNormalize, exercise=TRUE, exercise.blanks = "___+"}
+ames_recipe <- ____(sale_price ~ ., data = ameshousing) %>% #assigns columns to roles of “outcome” or “predictor” using the formula
+  step_bestNormalize(____)
+
+ames_recipe
+
+ames_recipe %>%
+  prep() %>%
+  juice() %>%
+  ggplot(aes(x = sale_price)) + 
+  geom_histogram(bins = 50) + #for each bin, the number of data points that fall into it are counted (frequency)
+  labs(x = "Sale Price",
+       y = "Number of Houses sold")
+```
+
+```{r bestNormalize-solution}
+ames_recipe <- recipe(sale_price ~ ., data = ameshousing) %>%
+  step_bestNormalize(sale_price)
+
+ames_recipe 
+
+ames_recipe %>%
+  prep() %>%
+  juice() %>%
+  ggplot(aes(x = sale_price)) + 
+  geom_histogram(bins = 50) + 
+  labs(x = "Sale Price",
+       y = "Number of Houses sold")
+```
+
+> The `prep()` function takes a recipe and computes everything so that the preprocessing steps can be executed. Note that this is done with the training data. All preprocessing and feature engineering steps use only the training data. Otherwise, information leakage can negatively impact the model's performance when used with new data.
+
+> The `juice()` function is a nice little shortcut. When we `juice()` the recipe, we squeeze that training data back out, transformed in the ways we specified.
+
+![](images/recipes.png){width="80%"}
 
 ### Analyse correlated variables
 
@@ -259,7 +303,15 @@ The code above takes an input data set and puts 80% of it into a training datase
 
 ### Preprocessing step for modeling
 
-In tidymodels, you can preprocess your data using **recipes**. Within a recipe, you can implement many steps on one dataset during preprocessing. There are an enormous number of different kinds of preprocessing you can do. For example, The year in which a house was built and the year when it was remodelled are not really the most relevant parameters we look at when buying a house: instead, buyers usually care a lot more about the age of the house and the time since the last remodel.
+As we have already mentioned, in tidymodels, you can preprocess your data using **recipes**. Within a recipe, you can implement many steps on one dataset during preprocessing. There are an enormous number of different kinds of preprocessing you can do. For example, The year in which a house was built and the year when it was remodelled are not really the most relevant parameters we look at when buying a house: instead, buyers usually care a lot more about the age of the house and the time since the last remodel.
+
+Some other preprocessing steps can include:
+
+-   Scaling and centering numeric predictors;
+-   Removing skewness from numeric variables;
+-   One-hot and dummy variable encoding for categorical variables;
+-   Removing correlated predictors and zero variance variables;
+-   Imputing missing data.
 
 **Instructions** Use the `recipe()` function to apply the following preprocessing steps:
 

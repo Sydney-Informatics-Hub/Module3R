@@ -29,8 +29,8 @@ learnr::run_tutorial("Part-1", package = "Module3R")
 
 | Tutorial | Description                                                       |
 |:--------------|:--------------------------------------------------------|
-| `Part-1`  | Ames housing dataset - Predict selling prices                     |
-| `Part-2`  | Pima Indian Women's diabetes dataset - Predicting diabetes status |
+| `Part 1`  | Ames housing dataset - Predict selling prices                     |
+| `Part 2`  | Pima Indian Women's diabetes dataset - Predicting diabetes status |
 
 ## Code of Conduct
 
