@@ -1,0 +1,25 @@
+Package: Module3R
+Title: Getting Started with Machine Learning in R
+Version: 0.0.0.9000
+Authors@R: 
+    person("Giorgia", "Mori", , "giorgia.mori@sydney.edu.au", role = c("aut", "cre"))
+Description: In this tutorial, you will gain experience in exploratory data analysis, preparing data so it is ready for predictive modeling, training supervised machine learning models using tidymodels, and evaluating those models.
+License: MIT + file LICENSE
+Depends: 
+    R (>= 3.1),
+    tidyverse,
+    tidymodels
+Imports: 
+    workflowsets,
+    vip,
+    skimr,
+    bestNormalize,
+    AmesHousing,
+    ggcorrplot,
+    naniar,
+    dplyr,
+    ggplot2
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+Suggests: learnr
