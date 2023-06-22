@@ -8,7 +8,7 @@ You can install the development version from [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("informatics/Module3R")
+devtools::install_github("Sydney-Informatics-Hub/Module3R")
 ```
 
 ## How to run the tutorials
