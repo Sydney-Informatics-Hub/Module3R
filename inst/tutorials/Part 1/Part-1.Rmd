@@ -45,7 +45,7 @@ ames_test <- testing(ames_split)
 
 ames_rec <-
   recipe(sale_price ~ ., data = ames_train) %>% 
-  step_best_normalize(sale_price) %>%
+  step_best_normalize(sale_price, skip = TRUE) %>%
   step_filter(gr_liv_area <= 4000) %>%
   step_mutate(time_since_remodel = year_sold - year_remod_add, 
          house_age = year_sold - year_built) %>%
@@ -158,9 +158,11 @@ We will normalize the outcome variable using the **recipes** package, an extensi
 
 ```{r bestNormalize, exercise=TRUE, exercise.blanks = "___+"}
 ames_recipe <- ____(sale_price ~ ., data = ameshousing) %>% #assigns columns to roles of “outcome” or “predictor” using the formula
-  step_bestNormalize(____)
+  step_best_normalize(____)
 
 ames_recipe
+
+ames_recipe %>% prep() %>% tidy(number = 1) #to get the picked transformation
 
 ames_recipe %>%
   prep() %>%
@@ -173,9 +175,11 @@ ames_recipe %>%
 
 ```{r bestNormalize-solution}
 ames_recipe <- recipe(sale_price ~ ., data = ameshousing) %>%
-  step_bestNormalize(sale_price)
+  step_best_normalize(sale_price)
 
 ames_recipe 
+
+ames_recipe %>% prep() %>% tidy(number = 1)
 
 ames_recipe %>%
   prep() %>%
@@ -322,7 +326,7 @@ Some other preprocessing steps can include:
 ```{r preprocessing, exercise=TRUE, exercise.blanks = "___+"}
 ames_rec <-
   ____(sale_price ~ ., data = ____) %>% 
-  step_best_normalize(___) %>%
+  step_best_normalize(___, skip = TRUE) %>%
   step_filter(____ <= 4000) %>%
   step_mutate(____ = year_sold - year_remod_add, 
          ____ = year_sold - year_built) %>%
@@ -338,7 +342,7 @@ ames_rec
 ```{r preprocessing-solution}
 ames_rec <-
   recipe(sale_price ~ ., data = ames_train) %>% 
-  step_best_normalize(sale_price) %>%
+  step_best_normalize(sale_price, skip = TRUE) %>%
   step_filter(gr_liv_area <= 4000) %>%
   step_mutate(time_since_remodel = year_sold - year_remod_add, 
          house_age = year_sold - year_built) %>%
@@ -348,9 +352,9 @@ ames_rec <-
   step_dummy(all_nominal_predictors(), one_hot = FALSE) #create numeric representations of categorical data
   
 ames_rec
-
-#ames_rec %>% prep() %>% tidy(number = 1) to get the picked transformation
 ```
+
+> To avoid information leakage, the training set and any outcome columns are not available for use at prediction time. When using a recipe, we thus need a mechanism to ensure that some operations are applied only to the data that are given to the model. Each step function has an option called `skip` that, when set to `TRUE`, will be ignored by the prediction function (such as `last_fit()`, which we will see at the end of this tutorial). In this way, you can isolate the steps that affect the modeling data without causing errors when applied to new samples. However, all steps are applied when using training functions (such as `fit_resamples()`, wshich we will use later).
 
 ### Build a model specification and create a modeling workflow
 
@@ -377,27 +381,9 @@ ames_lm <- linear_reg() %>%
 
 The **workflow** package was designed to capture the entire modeling process and combine *models* and *recipes* into a single object.
 
-**Instructions** Create a workflow, start with `workflow()` to create an empty workflow and then add out model and recipe with `add_model()` and `add_recipe()`:
+**Instructions** Create a workflow, start with `workflow()` to create an empty workflow and then add out model (`ames_lm`) and recipe (`ames_rec`) with `add_model()` and `add_recipe()`:
 
 ```{r wf, exercise=TRUE, exercise.blanks = "___+"}
-ames_train <- qread(here("inst/tutorials/Part1/models", "ames_train.qs"))
-
-library(tidymodels)
-
-#Specify the recipe
-ames_rec <-
-  recipe(sale_price ~ ., data = ames_train) %>% 
-  step_best_normalize(sale_price) %>%
-  step_filter(gr_liv_area <= 4000) %>%
-  step_mutate(time_since_remodel = year_sold - year_remod_add, 
-         house_age = year_sold - year_built) %>%
-  step_select(-year_remod_add, -year_built) %>%
-  step_normalize(all_numeric_predictors()) %>%
-  step_dummy(all_nominal_predictors(), one_hot = FALSE)
-
-#Specify a linear regression model
-ames_lm <- linear_reg() %>% 
-  set_engine("lm")   
 
 #Add the recipe + model to a workflow
 ames_wf <- workflow() %>%
@@ -408,24 +394,6 @@ ames_wf
 ```
 
 ```{r wf-solution}
-ames_train <- qread(here("inst/tutorials/Part1/models", "ames_train.qs"))
-
-library(tidymodels)
-
-#Specify the recipe
-ames_rec <-
-  recipe(sale_price ~ ., data = ames_train) %>% 
-  #step_best_normalize(sale_price) %>%
-  step_filter(gr_liv_area <= 4000) %>%
-  step_mutate(time_since_remodel = year_sold - year_remod_add, 
-         house_age = year_sold - year_built) %>%
-  step_select(-year_remod_add, -year_built) %>%
-  step_normalize(all_numeric_predictors()) %>%
-  step_dummy(all_nominal_predictors(), one_hot = FALSE)
-
-#Specify a linear regression model
-ames_lm <- linear_reg() %>% 
-  set_engine("lm")   
 
 #Add the recipe + model to a workflow
 ames_wf <- workflow() %>%
@@ -462,10 +430,6 @@ question(
 -   The argument `repeats` specifies the number of repeats.
 
 ```{r folds, exercise=TRUE, exercise.blanks = "___+"}
-ames_train <- qread(here("inst/tutorials/Part1/models", "ames_train.qs"))
-
-library(tidymodels)
-
 set.seed(123)
 
 ames_folds <- vfold_cv(ames_train, ___ = 10, ___ = 5)
@@ -474,17 +438,11 @@ glimpse(ames_folds)
 ```
 
 ```{r folds-solution}
-ames_train <- qread(here("inst/tutorials/Part1/models", "ames_train.qs"))
-
-library(tidymodels)
-
 set.seed(123)
 
 ames_folds <- vfold_cv(ames_train, v = 10, repeats = 5)
 
 glimpse(ames_folds)
-
-qsave(ames_folds, here("inst/tutorials/Part1/models", "ames_folds.qs"))
 ```
 
 Excellent job! You preprocessed this data, built a modeling workflow, and created cross-validation folds to evaluate model performance. 😎 Now it's time to put this all together and evaluate this model's performance.
@@ -500,43 +458,13 @@ Excellent job! You preprocessed this data, built a modeling workflow, and create
 *Warnings: Linear regression detects some redundancies in the predictor set. We can ignore the warnings since lm() can deal with it.*
 
 ```{r train, exercise=TRUE, exercise.blanks = "___+"}
-ames_train <- qread(here("inst/tutorials/Part1/models", "ames_train_10_perc.qs"))
-
-library(tidymodels)
-library(bestNormalize)
-
 set.seed(123)
-
-ames_folds <- vfold_cv(ames_train, v = 10, repeats = 5, strata = sale_price)
-
-#Specify the recipe
-ames_rec <-
-  recipe(sale_price ~ ., data = ames_train) %>% 
-  step_best_normalize(sale_price) %>%
-  step_filter(gr_liv_area <= 4000) %>%
-  step_mutate(time_since_remodel = year_sold - year_remod_add, 
-         house_age = year_sold - year_built) %>%
-  step_select(-year_remod_add, -year_built) %>%
-  step_nzv(all_predictors()) %>% 
-  step_normalize(all_numeric_predictors()) %>% 
-  step_dummy(all_nominal_predictors(), one_hot = FALSE)
-
-#Specify a linear regression model
-ames_lm <- linear_reg() %>% 
-  set_engine("lm")   
-
-##Linear regression workflow
-ames_wf <- workflow() %>%
-  add_model(ames_lm) %>% 
-  add_recipe(ames_rec)
-
-set.seed(234)
 
 #Train the linear regression model
 ames_res <- ames_wf %>%
   ____(
     ames_folds,
-    metrics = metric_set(rsq, rmse),
+    metrics = metric_set(rsq),
     control = control_resamples(save_pred = TRUE)
   )
 
@@ -544,33 +472,6 @@ glimpse(ames_res)
 ```
 
 ```{r train-solution}
-ames_train <- qread(here("inst/tutorials/Part1/models", "ames_train.qs"))
-ames_folds <- qread(here("inst/tutorials/Part1/models", "ames_folds.qs"))
-
-library(tidymodels)
-library(bestNormalize)
-
-#Specify the recipe
-ames_rec <-
-  recipe(sale_price ~ ., data = ames_train) %>% 
-  step_best_normalize(sale_price) %>%
-  step_filter(gr_liv_area <= 4000) %>%
-  step_mutate(time_since_remodel = year_sold - year_remod_add, 
-         house_age = year_sold - year_built) %>%
-  step_select(-year_remod_add, -year_built) %>%
-  step_nzv(all_predictors()) %>% 
-  step_normalize(all_numeric_predictors()) %>% 
-  step_dummy(all_nominal_predictors(), one_hot = FALSE) 
-
-#Specify a linear regression model
-ames_lm <- linear_reg() %>% 
-  set_engine("lm")   
-
-##Linear regression workflow
-ames_wf <- workflow() %>%
-  add_model(ames_lm) %>% 
-  add_recipe(ames_rec)
-
 set.seed(123)
 
 #Train the linear regression model
@@ -582,8 +483,6 @@ ames_res <- ames_wf %>%
   )
 
 glimpse(ames_res)
-
-qsave(ames_res, here("inst/tutorials/Part1/models", "ames_res.qs"))
 ```
 
 The column `.metric` contains the performance statistics created from the 10 assessment sets. These can be manually unnested but the **tune** package contains a number of simple functions that can extract these data:
@@ -591,18 +490,10 @@ The column `.metric` contains the performance statistics created from the 10 ass
 **Instructions** Use the function `collect_metrics()` to obtain the metrics we specified from the resampling results:
 
 ```{r metrics, exercise=TRUE, exercise.blanks = "___+"}
-ames_res <- qread(here("inst/tutorials/Part1/models", "ames_res.qs"))
-
-library(tidymodels)
-
 ____(ames_res)
 ```
 
 ```{r metrics-solution}
-ames_res <- qread(here("inst/tutorials/Part1/models", "ames_res.qs"))
-
-library(tidymodels)
-
 collect_metrics(ames_res)
 ```
 
@@ -622,33 +513,6 @@ Let's use the `last_fit()` function to fit to the entire training set one time a
 -   Obtain the performance metrics on the test set with `collect_metrics()`:
 
 ```{r test, exercise=TRUE, exercise.blanks = "___+"}
-ames_split <- qread(here("inst/tutorials/Part1/models", "ames_split.qs"))
-ames_train <- qread(here("inst/tutorials/Part1/models", "ames_train.qs"))
-
-library(tidymodels)
-library(bestNormalize)
-
-#Specify the recipe
-ames_rec <-
-  recipe(sale_price ~ ., data = ames_train) %>% 
-  step_best_normalize(sale_price) %>%
-  step_filter(gr_liv_area <= 4000) %>%
-  step_mutate(time_since_remodel = year_sold - year_remod_add, 
-         house_age = year_sold - year_built) %>%
-  step_select(-year_remod_add, -year_built) %>%
-  step_nzv(all_predictors()) %>% 
-  step_normalize(all_numeric_predictors()) %>% 
-  step_dummy(all_nominal_predictors(), one_hot = FALSE) 
-
-#Specify a linear regression model
-ames_lm <- linear_reg() %>% 
-  set_engine("lm")   
-
-##Linear regression workflow
-ames_wf <- workflow() %>%
-  add_model(ames_lm) %>% 
-  add_recipe(ames_rec)
-
 #Final fit on test dataset
 ames_final <- ames_wf %>%
   ____(ames_split, 
@@ -659,33 +523,6 @@ ____(ames_final)
 ```
 
 ```{r test-solution}
-ames_split <- qread(here("inst/tutorials/Part1/models", "ames_split.qs"))
-ames_train <- qread(here("inst/tutorials/Part1/models", "ames_train.qs"))
-
-library(tidymodels)
-library(bestNormalize)
-
-#Specify the recipe
-ames_rec <-
-  recipe(sale_price ~ ., data = ames_train) %>% 
-  step_best_normalize(sale_price) %>%
-  step_filter(gr_liv_area <= 4000) %>%
-  step_mutate(time_since_remodel = year_sold - year_remod_add, 
-         house_age = year_sold - year_built) %>%
-  step_select(-year_remod_add, -year_built) %>%
-  step_nzv(all_predictors()) %>% 
-  step_normalize(all_numeric_predictors()) %>% 
-  step_dummy(all_nominal_predictors(), one_hot = FALSE) 
-
-#Specify a linear regression model
-ames_lm <- linear_reg() %>% 
-  set_engine("lm")   
-
-##Linear regression workflow
-ames_wf <- workflow() %>%
-  add_model(ames_lm) %>% 
-  add_recipe(ames_rec)
-
 #Final fit on test dataset
 ames_final <- ames_wf %>%
   last_fit(ames_split, 
@@ -693,28 +530,18 @@ ames_final <- ames_wf %>%
 
 # Obtain performance metrics on test data
 collect_metrics(ames_final)
-
-qsave(ames_final, here("inst/tutorials/Part1/models", "ames_final.qs"))
 ```
 
-The rsq and rmse metrics are similar for both the training and testing datasets in our linear regression model. This is a good sign that the model is not over-fitting and can be used for making predictions on new data.
+The rsq metric is similar for both the training and testing datasets in our linear regression model. This is a good sign that the model is not over-fitting and can be used for making predictions on new data.
 
 **Instructions** We can save the test set predictions by using the `collect_predictions()` function. This function returns a data frame which will have the response variables values from the test set and a column named `.pred` with the model predictions.
 
 ```{r final, exercise=TRUE, exercise.blanks = "___+"}
-ames_final <- qread(here("inst/tutorials/Part1/models", "ames_final.qs"))
-
-library(tidymodels)
-
 # Obtain test set predictions data frame
 ames_final %>% ____
 ```
 
 ```{r final-solution}
-ames_final <- qread(here("inst/tutorials/Part1/models", "ames_final.qs"))
-
-library(tidymodels)
-
 # Obtain test set predictions data frame
 ames_final %>% collect_predictions()
 ```
@@ -722,10 +549,6 @@ ames_final %>% collect_predictions()
 Wonderful! Sit back and run the given code to visualize the results!
 
 ```{r plot, exercise=TRUE}
-ames_final <- qread(here("inst/tutorials/Part1/models", "ames_final.qs"))
-
-library(tidymodels)
-
 ames_final %>% 
   collect_predictions() %>% 
   ggplot(aes(x = .pred, y = sale_price)) +
