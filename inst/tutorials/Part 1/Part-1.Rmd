@@ -1,5 +1,5 @@
 ---
-title: "Getting Started with Machine Learning in R"
+title: "Getting Started with Machine Learning in R - Part 1"
 output: 
   learnr::tutorial:
     progressive: true
@@ -29,7 +29,7 @@ library(tidymodels)
 theme_set(theme_minimal())
 
 # don't echo chunks
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 
 ameshousing <- AmesHousing::make_ames() %>%
   janitor::clean_names()
@@ -112,7 +112,7 @@ Start off this case study by examining your data set and visualizing the distrib
 -   What can you figure out about the different variables?
 -   Which do you think are more or less important?
 
-```{r skim, exercise=TRUE, exercise.lines = 4}
+```{r skim, exercise=TRUE, exercise.lines = 2}
 ____(ameshousing)
 ```
 
@@ -157,7 +157,7 @@ We will normalize the outcome variable using the **recipes** package, an extensi
 *The recipe shown below only has one preprocessing step (normalizing, that comes from an extra add-on package called bestNormalize), but you can implement many steps on one dataset during preprocessing*
 
 ```{r bestNormalize, exercise=TRUE, exercise.blanks = "___+"}
-ames_recipe <- ____(sale_price ~ ., data = ameshousing) %>% #assigns columns to roles of “outcome” or “predictor” using the formula
+ames_recipe <- ____(sale_price ~ ., data = ameshousing) %>% # assigns columns to roles of “outcome” or “predictor” using the formula
   step_best_normalize(____)
 
 ames_recipe
@@ -267,9 +267,8 @@ Creating training/testing splits reduces overfitting. When you evaluate your mod
 
 **Instructions**
 
--   Load the tidymodels metapackage, which also includes `dplyr` for data manipulation;
--   Create a data split that divides the original data into 80%/20% sections and (roughly) divides the data into subsets based on the target/outcome variable's distribution;
--   Assign the 80% partition to `ames_train` and the 20% partition to `ames_test`.
+-   Use the `initial_split()` function to create a data split that divides the original data into 80%/20% sections and (roughly) divides the data into subsets based on the target/outcome variable's distribution;
+-   Use the functions `training()` and `testing()` to assign the 80% partition to `ames_train` and the 20% partition to `ames_test`, respectively.
 
 ```{r test-train, exercise=TRUE, exercise.blanks = "___+"}
 # Split the data into training and test sets
@@ -287,8 +286,7 @@ glimpse(ames_test)
 ```
 
 ```{r test-train-solution}
-# Split the data into training and test sets
-set.seed(123) #so we all get the same results
+set.seed(123)
 
 ames_split <- ameshousing %>%
     initial_split(prop = 0.8, 
@@ -303,7 +301,7 @@ glimpse(ames_test)
 
 The code above takes an input data set and puts 80% of it into a training dataset and 20% of it into a testing dataset; it chooses the individual cases so that both sets are balanced in selling price.
 
-*Stratified sampling would split within each quartile. This ensures that the training and testing sets have a similar distribution of the target variable, which can lead to more reliable model performance estimates*
+*Stratified sampling would split within each quartile. This ensures that the training and testing sets have a similar distribution of the target variable, which can lead to more reliable model performance estimates.*
 
 ### Preprocessing step for modeling
 
@@ -331,9 +329,9 @@ ames_rec <-
   step_mutate(____ = year_sold - year_remod_add, 
          ____ = year_sold - year_built) %>%
   step_select(-year_remod_add, -year_built) %>%
-  step_nzv(all_predictors()) %>% #remove predictors that are highly sparse and unbalanced
-  step_normalize(all_numeric_predictors()) %>% #normalize the data to a standard range by dividing each observation by the standard deviation of the feature
-  step_dummy(all_nominal_predictors(), one_hot = FALSE) #create numeric representations of categorical data
+  step_nzv(all_predictors()) %>% # remove predictors that are highly sparse and unbalanced
+  step_normalize(all_numeric_predictors()) %>% # normalize the data to a standard range by dividing each observation by the standard deviation of the feature
+  step_dummy(all_nominal_predictors(), one_hot = FALSE) # create numeric representations of categorical data
 ames_rec
   
 ames_rec
@@ -347,9 +345,9 @@ ames_rec <-
   step_mutate(time_since_remodel = year_sold - year_remod_add, 
          house_age = year_sold - year_built) %>%
   step_select(-year_remod_add, -year_built) %>%
-  step_nzv(all_predictors()) %>% #remove predictors that are highly sparse and unbalanced
-  step_normalize(all_numeric_predictors()) %>% #normalize the data to a standard range by dividing each observation by the standard deviation of the feature
-  step_dummy(all_nominal_predictors(), one_hot = FALSE) #create numeric representations of categorical data
+  step_nzv(all_predictors()) %>% 
+  step_normalize(all_numeric_predictors()) %>% 
+  step_dummy(all_nominal_predictors(), one_hot = FALSE) 
   
 ames_rec
 ```
@@ -369,14 +367,13 @@ In tidymodels, you specify models using using the **parsnip** package and three 
 ```{r model-build, exercise=TRUE, exercise.blanks = "___+"}
 #Linear regression
 ames_lm <- ____ %>% 
-  set_engine("lm")      
+  set_engine("lm")
+#set_mode("regression") we don't need this as the model linear_reg() only does regression
 ```
 
 ```{r model-build-solution}
-#Linear regression
 ames_lm <- linear_reg() %>% 
-  set_engine("lm")           
-                             #set_mode("regression") we don't need this as the model linear_reg() only does regression
+  set_engine("lm")         
 ```
 
 The **workflow** package was designed to capture the entire modeling process and combine *models* and *recipes* into a single object.
@@ -394,8 +391,6 @@ ames_wf
 ```
 
 ```{r wf-solution}
-
-#Add the recipe + model to a workflow
 ames_wf <- workflow() %>%
   add_model(ames_lm) %>% 
   add_recipe(ames_rec)
@@ -474,7 +469,6 @@ glimpse(ames_res)
 ```{r train-solution}
 set.seed(123)
 
-#Train the linear regression model
 ames_res <- ames_wf %>%
   fit_resamples(
     ames_folds,
@@ -523,12 +517,10 @@ ____(ames_final)
 ```
 
 ```{r test-solution}
-#Final fit on test dataset
 ames_final <- ames_wf %>%
   last_fit(ames_split, 
            metrics = metric_set(rsq))
 
-# Obtain performance metrics on test data
 collect_metrics(ames_final)
 ```
 
@@ -542,7 +534,6 @@ ames_final %>% ____
 ```
 
 ```{r final-solution}
-# Obtain test set predictions data frame
 ames_final %>% collect_predictions()
 ```
 
