@@ -194,6 +194,8 @@ ames_recipe %>%
 
 > The `juice()` function is a nice little shortcut. When we `juice()` the recipe, we squeeze that training data back out, transformed in the ways we specified.
 
+> A more detailed explanation on recipes is provided in *Part 3* of this Package. 
+
 ![](images/recipes.png){width="80%"}
 
 ### Analyse correlated variables
@@ -303,7 +305,7 @@ The code above takes an input data set and puts 80% of it into a training datase
 
 *Stratified sampling would split within each quartile. This ensures that the training and testing sets have a similar distribution of the target variable, which can lead to more reliable model performance estimates.*
 
-### Preprocessing step for modeling
+### Preprocessing steps for modeling
 
 As we have already mentioned, in tidymodels, you can preprocess your data using **recipes**. Within a recipe, you can implement many steps on one dataset during preprocessing. There are an enormous number of different kinds of preprocessing you can do. For example, The year in which a house was built and the year when it was remodelled are not really the most relevant parameters we look at when buying a house: instead, buyers usually care a lot more about the age of the house and the time since the last remodel.
 

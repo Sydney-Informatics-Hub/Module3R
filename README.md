@@ -31,6 +31,7 @@ learnr::run_tutorial("Part 1", package = "Module3R")
 |:----------------|:------------------------------------------------------|
 | `Part 1` | Ames housing dataset - Predict selling prices                     |
 | `Part 2` | Pima Indian Women's diabetes dataset - Predicting diabetes status |
+| `Part 3` | Unsupervised dimensionality reduction - Transforming groups of predictors |
 
 ## Code of Conduct
 
@@ -42,4 +43,6 @@ Please note that this package is released with a [Code of Conduct](https://pages
 -   *Adapted from "Linear Regression and tidymodels", available [here](https://www.gmudatamining.com/lesson-10-r-tutorial.html)*;
 -   *Max Kuhn and Julia Silge, "Tidy Modeling with R", Version 1.0.0(2022-12-20)*;
 -   *Adapted from "Decision Trees and Random Forests", available [here](https://www.gmudatamining.com/lesson-13-r-tutorial.html)*;
--   *Adapted from "Machine Learning with tidymodels" workshop, licensed CC Y-SA 4.0. Available [here](https://workshops.tidymodels.org/)*.
+-   *Adapted from "Machine Learning with tidymodels" workshop, licensed CC Y-SA 4.0. Available [here](https://workshops.tidymodels.org/)*;
+-   *Adapted from the [learntidymodels](https://github.com/tidymodels/learntidymodels) package*.
+
