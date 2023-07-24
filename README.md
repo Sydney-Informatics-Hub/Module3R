@@ -30,7 +30,7 @@ learnr::run_tutorial("Part 1", package = "Module3R")
 | Tutorial | Description                                                       |
 |:----------------|:------------------------------------------------------|
 | `Part 1` | Ames housing dataset - Predict selling prices                     |
-| `Part 2` | Pima Indian Women's diabetes dataset - Predicting diabetes status |
+| `Part 2` | Pima Indian Women's diabetes dataset - Predict diabetes status |
 | `Part 3` | Unsupervised dimensionality reduction - Transforming groups of predictors |
 
 ## Code of Conduct
