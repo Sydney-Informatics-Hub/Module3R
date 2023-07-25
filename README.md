@@ -22,7 +22,7 @@ learnr::run_tutorial("tutorial-of-choice", package = "Module3R")
 For example:
 
 ``` r
-learnr::run_tutorial("Part 1", package = "Module3R")
+learnr::run_tutorial("Part-1", package = "Module3R")
 ```
 
 ## List of available tutorials
