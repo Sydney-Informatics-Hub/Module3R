@@ -33,6 +33,28 @@ learnr::run_tutorial("Part 1", package = "Module3R")
 | `Part 2` | Pima Indian Women's diabetes dataset - Predict diabetes status |
 | `Part 3` | Unsupervised dimensionality reduction - Transforming groups of predictors |
 
+
+## How to use the tutorials
+
+These tutorials consist of content along with interactive components for checking and reinforcing understanding. Throughout the tutorials you will find:
+
+-  Narrative, figures and illustrations;
+
+-  Code exercises that you can edit and execute directly;
+
+-  Quiz questions...
+
+Each tutorial automatically preserve work done within them, so if you work on a few exercises or questions and then return to the tutorial later, you can pick up right where you have left off.
+
+Each tutorial includes a Table of Contents and it reveals content one sub-section at a time:
+
+![](images/toc.png)
+
+Exercises are interactive R code chunks that allow you to directly execute R code and see its results. 
+When a solution code chunk is provided, there will be a *Solution* button on the exercise that you can click if you are stuck:
+
+![](images/solution.png)
+
 ## Code of Conduct
 
 Please note that this package is released with a [Code of Conduct](https://pages.github.sydney.edu.au/informatics/sih_codeofconduct/). By contributing to this package, you agree to abide by its terms.
