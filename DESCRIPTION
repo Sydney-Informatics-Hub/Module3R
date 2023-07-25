@@ -18,11 +18,10 @@ Imports:
     ggcorrplot,
     naniar,
     dplyr,
-    ggplot2,
     learnr,
     mlbench,
     learntidymodels,
-    tidytext,
+    tidytext
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3

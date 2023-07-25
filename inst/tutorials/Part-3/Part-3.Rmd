@@ -6,6 +6,9 @@ output:
     allow_skip: false
     theme: "readable"
 runtime: shiny_prerendered
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r setup, include=FALSE, message=FALSE}
@@ -14,7 +17,6 @@ library(tidyverse)
 library(tidymodels)
 library(embed)
 library(tidytext)
-library(gradethis)
 library(sortable)
 library(ggcorrplot)
 library(learntidymodels)
@@ -22,7 +24,7 @@ library(doParallel)
 library(finetune)
 theme_set(theme_minimal())
 
-knitr::opts_chunk$set(echo = FALSE, warnings = FALSE, exercise.checker = gradethis::grade_learnr)
+knitr::opts_chunk$set(echo = FALSE, warnings = FALSE)
 
 set.seed(123)
 
@@ -917,13 +919,13 @@ It is clear from these results that most models give very good performance; ther
 ```{r last_fit, exercise=TRUE, exercise.blanks = "___+", warning=FALSE}
 zoo_res <- 
   zoo_wf_set_tuning %>% 
-  extract_workflow("basic_multi") %>% 
-  finalize_workflow(
+  ____("basic_multi") %>% 
+  ____(
     zoo_wf_set_tuning %>% 
       extract_workflow_set_result("basic_multi") %>% # extract tuning results for that specific workflow
       select_best(metric = "roc_auc") # select the best results for that specific metric
   ) %>% 
-  last_fit(split = zoo_split, # your split object
+  ____(split = zoo_split, # your split object
            metrics = metric_set(roc_auc))
 ```
 
