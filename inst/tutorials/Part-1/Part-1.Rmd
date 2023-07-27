@@ -28,8 +28,6 @@ library(parallel)
 library(doParallel)
 theme_set(theme_minimal())
 
-tidymodels_prefer()
-
 ameshousing <- AmesHousing::make_ames() %>%
   janitor::clean_names()
 
