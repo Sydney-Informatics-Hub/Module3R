@@ -24,6 +24,8 @@ library(here)
 library(randomForest)
 library(vip)
 library(tidymodels)
+library(parallel)
+library(doParallel)
 theme_set(theme_minimal())
 
 tidymodels_prefer()
@@ -59,6 +61,9 @@ ames_wf <- workflow() %>%
 
 ames_folds <- vfold_cv(ames_train, v = 10, repeats = 5)
 
+cl <- makePSOCKcluster(5)
+registerDoParallel(cl)
+
 ames_res <- ames_wf %>%
   fit_resamples(
     ames_folds,
@@ -66,9 +71,17 @@ ames_res <- ames_wf %>%
     control = control_resamples(save_pred = TRUE)
   )
 
+stopCluster(cl)
+
+cl2 <- makePSOCKcluster(5)
+registerDoParallel(cl2)
+
 ames_final <- ames_wf %>%
   last_fit(ames_split, 
-           metrics = metric_set(rsq))
+           metrics = metric_set(rsq),
+           control = control_last_fit(allow_par = TRUE))
+
+stopCluster(cl2)
 ```
 
 ## Welcome!
@@ -510,6 +523,8 @@ Let's use the `last_fit()` function to fit to the entire training set one time a
 -   Obtain the performance metrics on the test set with `collect_metrics()`:
 
 ```{r test, exercise=TRUE, exercise.blanks = "___+", warning=FALSE}
+set.seed(123)
+
 #Final fit on test dataset
 ames_final <- ames_wf %>%
   ____(ames_split, 
@@ -520,11 +535,13 @@ ____(ames_final)
 ```
 
 ```{r test-solution}
+set.seed(123)
+
 ames_final <- ames_wf %>%
   last_fit(ames_split, 
            metrics = metric_set(rsq))
 
-collect_metrics(ames_final)
+#collect_metrics(ames_final)
 ```
 
 The rsq metric is similar for both the training and testing datasets in our linear regression model. This is a good sign that the model is not over-fitting and can be used for making predictions on new data.
