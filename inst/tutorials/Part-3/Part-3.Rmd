@@ -6,12 +6,9 @@ output:
     allow_skip: false
     theme: "readable"
 runtime: shiny_prerendered
-editor_options: 
-  markdown: 
-    wrap: 72
 ---
 
-```{r setup, include=FALSE, message=FALSE}
+```{r setup, include=FALSE}
 library(learnr)
 library(tidyverse)
 library(tidymodels)
@@ -24,7 +21,7 @@ library(doParallel)
 library(finetune)
 theme_set(theme_minimal())
 
-knitr::opts_chunk$set(echo = FALSE, warnings = FALSE)
+knitr::opts_chunk$set(echo = FALSE)
 
 set.seed(123)
 

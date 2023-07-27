@@ -6,12 +6,9 @@ output:
     allow_skip: false
     theme: "readable"
 runtime: shiny_prerendered
-editor_options: 
-  markdown: 
-    wrap: 72
 ---
 
-```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+```{r setup, include=FALSE}
 # load packages
 library(learnr)
 library(tidyverse)
@@ -29,8 +26,7 @@ library(vip)
 library(tidymodels)
 theme_set(theme_minimal())
 
-# don't echo chunks
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, error = FALSE)
+tidymodels_prefer()
 
 ameshousing <- AmesHousing::make_ames() %>%
   janitor::clean_names()
@@ -45,8 +41,7 @@ ames_train <- training(ames_split)
 ames_test <- testing(ames_split)
 
 ames_rec <-
-  recipe(sale_price ~ ., data = ames_train) %>% 
-  step_best_normalize(sale_price, skip = TRUE) %>%
+  recipe(sale_price ~ ., data = ames_train) %>%
   step_filter(gr_liv_area <= 4000) %>%
   step_mutate(time_since_remodel = year_sold - year_remod_add, 
          house_age = year_sold - year_built) %>%
@@ -332,14 +327,12 @@ Some other preprocessing steps can include:
 
 **Instructions** Use the `recipe()` function to apply the following preprocessing steps:
 
--   use the **bestNormalize** package to transform the outcome variable (sale_price);
 -   filter out outliers (houses with a gr_liv_area \> 4000 square feet) using `step_filter()`;
 -   create new variables called *"time_since_remodel"* and *"house_age"* using `step_mutate()`:
 
 ```{r preprocessing, exercise=TRUE, exercise.blanks = "___+"}
 ames_rec <-
-  ____(sale_price ~ ., data = ____) %>% 
-  step_best_normalize(___, skip = TRUE) %>%
+  ____(sale_price ~ ., data = ____) %>%
   step_filter(____ <= 4000) %>%
   step_mutate(____ = year_sold - year_remod_add, 
          ____ = year_sold - year_built) %>%
@@ -355,7 +348,6 @@ ames_rec
 ```{r preprocessing-solution}
 ames_rec <-
   recipe(sale_price ~ ., data = ames_train) %>% 
-  step_best_normalize(sale_price, skip = TRUE) %>%
   step_filter(gr_liv_area <= 4000) %>%
   step_mutate(time_since_remodel = year_sold - year_remod_add, 
          house_age = year_sold - year_built) %>%
@@ -366,8 +358,6 @@ ames_rec <-
   
 ames_rec
 ```
-
-> To avoid information leakage, the training set and any outcome columns are not available for use at prediction time. When using a recipe, we thus need a mechanism to ensure that some operations are applied only to the data that are given to the model. Each step function has an option called `skip` that, when set to `TRUE`, will be ignored by the prediction function (such as `last_fit()`, which we will see at the end of this tutorial). In this way, you can isolate the steps that affect the modeling data without causing errors when applied to new samples. However, all steps are applied when using training functions (such as `fit_resamples()`, wshich we will use later).
 
 ### Build a model specification and create a modeling workflow
 
@@ -465,7 +455,7 @@ Excellent job! You preprocessed this data, built a modeling workflow, and create
 -   get the performance metrics for each fold;
 -   get the average performance across all the folds.
 
-```{r train, exercise=TRUE, exercise.blanks = "___+", warning=FALSE, error=FALSE}
+```{r train, exercise=TRUE, exercise.blanks = "___+", exercise.timelimit = 800}
 set.seed(123)
 
 #Train the linear regression model
