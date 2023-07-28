@@ -47,7 +47,7 @@ d_na_train <- training(diabetes_split)
 d_na_test <- testing(diabetes_split)
 
 diabetes_rec <- recipe(diabetes ~ ., data = d_na_train) %>%
-                step_impute_median(all_predictors()) %>%
+                step_impute_median(all_numeric_predictors()) %>%
                 step_normalize(all_numeric_predictors())
 
 diabetes_folds <- vfold_cv(d_na_train, v = 10, repeats = 5)
@@ -410,7 +410,7 @@ preprocessing steps:
 set.seed(123)
 
 diabetes_rec <- ____(diabetes ~ ., data = d_na_train) %>%
-                ____(all_predictors()) %>% # perform median imputation
+                ____(all_numeric_predictors()) %>% # perform median imputation
                 ____(all_numeric_predictors()) # all our predictors are numeric so standardize them
   
 diabetes_rec  
@@ -420,7 +420,7 @@ diabetes_rec
 set.seed(123)
 
 diabetes_rec <- recipe(diabetes ~ ., data = d_na_train) %>%
-                step_impute_median(all_predictors()) %>%
+                step_impute_median(all_numeric_predictors()) %>%
                 step_normalize(all_numeric_predictors()) 
   
 diabetes_rec  
@@ -958,7 +958,7 @@ the training data, and produce evaluations based on the test set.
 **Instructions**
 
 -   Use the `extract_workflow()` function to extract the specifications
-    of your best workflow (`**recipe_logistic_reg**`);
+    of your best workflow (`recipe_logistic_reg`);
 -   Update your workflow with your optimal model (`best_results`) using
     the `finalize_workflow()` function;
 -   Fit to the training set and evaluate on the testing set using
@@ -1069,7 +1069,7 @@ conf_matrix_rf %>%
 
 ```{r roc-solution}
   collect_predictions(final_diabetes_fit) %>%
-  roc_curve(truth  = diabetes, event_level="second", estimate = .pred_pos) %>%
+  roc_curve(truth=diabetes, event_level="second", estimate=.pred_pos) %>%
                 autoplot()
 
 conf_matrix_rf <- final_diabetes_fit %>%

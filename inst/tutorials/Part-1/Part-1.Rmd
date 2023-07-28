@@ -28,6 +28,9 @@ library(parallel)
 library(doParallel)
 theme_set(theme_minimal())
 
+# don't echo chunks
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+
 ameshousing <- AmesHousing::make_ames() %>%
   janitor::clean_names()
 
@@ -59,7 +62,9 @@ ames_wf <- workflow() %>%
 
 ames_folds <- vfold_cv(ames_train, v = 10, repeats = 5)
 
-cl <- makePSOCKcluster(5)
+
+all_cores <- parallel::detectCores(logical = TRUE)
+cl <- makePSOCKcluster(all_cores)
 registerDoParallel(cl)
 
 ames_res <- ames_wf %>%
@@ -69,17 +74,10 @@ ames_res <- ames_wf %>%
     control = control_resamples(save_pred = TRUE)
   )
 
-stopCluster(cl)
-
-cl2 <- makePSOCKcluster(5)
-registerDoParallel(cl2)
-
 ames_final <- ames_wf %>%
   last_fit(ames_split, 
            metrics = metric_set(rsq),
            control = control_last_fit(allow_par = TRUE))
-
-stopCluster(cl2)
 ```
 
 ## Welcome!
@@ -428,8 +426,8 @@ By using cross-validation, we can get a more accurate estimate of how well our m
 question(
   "When you implement 10-fold cross-validation repeated 5 times, you:",
   answer("randomly divide your training data into 50 subsets and train on 49 at a time (assessing on the other subset), iterating through all 50 subsets for assessment"),
-  answer("randomly divide your training data into 10 subsets and train on 9 at a time (assessing on the other subset), iterating through all 10 subsets for assessment. Then you repeat that process 5 times"),
-  answer("randomly divide your training data into 5 subsets and train on 4 at a time (assessing on the other subset), iterating through all 5 subsets. Then you repeat that process 10 times", correct = TRUE),
+  answer("randomly divide your training data into 10 subsets and train on 9 at a time (assessing on the other subset), iterating through all 10 subsets for assessment. Then you repeat that process 5 times", correct = TRUE),
+  answer("randomly divide your training data into 5 subsets and train on 4 at a time (assessing on the other subset), iterating through all 5 subsets. Then you repeat that process 10 times"),
   allow_retry = TRUE,
   correct = "Simulations and practical experience show that 10-fold cross-validation repeated 5 times is a great resampling approach for many situations. This approach involves randomly dividing your training data into 10 folds, or subsets or groups, and training on only 9 while using the other fold for assessment. You iterate through all 10 folds being used for assessment; this is one round of cross-validation. You can then repeat the whole process multiple, perhaps 5, times."
 )
@@ -526,7 +524,8 @@ set.seed(123)
 #Final fit on test dataset
 ames_final <- ames_wf %>%
   ____(ames_split, 
-       metrics = metric_set(rsq)))
+       metrics = metric_set(rsq),
+           control = control_last_fit(allow_par = TRUE))
 
 # Obtain performance metrics on test data
 ____(ames_final)
@@ -537,9 +536,10 @@ set.seed(123)
 
 ames_final <- ames_wf %>%
   last_fit(ames_split, 
-           metrics = metric_set(rsq))
+           metrics = metric_set(rsq),
+           control = control_last_fit(allow_par = TRUE))
 
-#collect_metrics(ames_final)
+collect_metrics(ames_final)
 ```
 
 The rsq metric is similar for both the training and testing datasets in our linear regression model. This is a good sign that the model is not over-fitting and can be used for making predictions on new data.

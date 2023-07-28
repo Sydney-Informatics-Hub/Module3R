@@ -139,7 +139,8 @@ zoo_res <-
       select_best(metric = "roc_auc") 
   ) %>% 
   last_fit(split = zoo_split, 
-           metrics = metric_set(roc_auc))
+           metrics = metric_set(roc_auc),
+           control = control_last_fit(allow_par = TRUE))
 ```
 
 ## Unsupervised dimensionality reduction
@@ -923,7 +924,8 @@ zoo_res <-
       select_best(metric = "roc_auc") # select the best results for that specific metric
   ) %>% 
   ____(split = zoo_split, # your split object
-           metrics = metric_set(roc_auc))
+           metrics = metric_set(roc_auc),
+           control = control_last_fit(allow_par = TRUE))
 ```
 
 ```{r last_fit-solution}
@@ -936,7 +938,8 @@ zoo_res <-
       select_best(metric = "roc_auc") 
   ) %>% 
   last_fit(split = zoo_split, 
-           metrics = metric_set(roc_auc))
+           metrics = metric_set(roc_auc),
+           control = control_last_fit(allow_par = TRUE))
 ```
 
 What are the results for our metric (multiclass ROC AUC) on the testing set? Do you remember which function we can use to extract this information?
