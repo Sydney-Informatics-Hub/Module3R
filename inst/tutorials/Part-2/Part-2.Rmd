@@ -1052,7 +1052,7 @@ alter this as needed.*
 ```{r roc, exercise=TRUE, exercise.blanks = "___+"}
 #ROC curve
   collect_predictions(final_diabetes_fit) %>%
-  ____(truth  = diabetes, event_level="second", estimate = .pred_pos) %>%  #specify which level of truth to consider as the "event"
+  ____(diabetes, event_level="second", .pred_pos) %>%  #specify which level of truth to consider as the "event"
                 autoplot()
 
 #confusion matrix dataframe
@@ -1069,7 +1069,7 @@ conf_matrix_rf %>%
 
 ```{r roc-solution}
   collect_predictions(final_diabetes_fit) %>%
-  roc_curve(truth=diabetes, event_level="second", estimate=.pred_pos) %>%
+  roc_curve(diabetes, event_level="second", .pred_pos) %>%
                 autoplot()
 
 conf_matrix_rf <- final_diabetes_fit %>%
@@ -1085,6 +1085,7 @@ conf_matrix_rf %>%
 ## Variable importance
 
 In order to visualize the variable importance scores of our  model, we will need to:
+
 -   manually train our workflow object with the `fit()` function on the training data;
 -   extract the trained model with the `pull_workflow_fit()` function;
 -   pass the trained model to the `vip()` function.
