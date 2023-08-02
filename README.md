@@ -53,6 +53,10 @@ Exercises are interactive R code chunks that allow you to directly execute R cod
 
 ![](images/sol.png)
 
+### For the trainer
+
+Introduction slides for each tutorial are [here](slides/Module3R.pptx).
+
 ## Code of Conduct
 
 Please note that this package is released with a [Code of Conduct](https://pages.github.sydney.edu.au/informatics/sih_codeofconduct/). By contributing to this package, you agree to abide by its terms.
