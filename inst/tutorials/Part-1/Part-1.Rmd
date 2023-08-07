@@ -45,6 +45,7 @@ ames_test <- testing(ames_split)
 
 ames_rec <-
   recipe(sale_price ~ ., data = ames_train) %>%
+  step_best_normalize(sale_price) %>%
   step_filter(gr_liv_area <= 4000) %>%
   step_mutate(time_since_remodel = year_sold - year_remod_add, 
          house_age = year_sold - year_built) %>%
@@ -82,13 +83,13 @@ ames_final <- ames_wf %>%
 
 ## Welcome!
 
-Predictive modeling, or supervised machine learning, is a powerful tool for using data to make predictions about the world around us. Once you understand the basic ideas of supervised machine learning, the next step is to practice your skills so you know how to apply these techniques wisely and appropriately. 
+Predictive modeling, or supervised machine learning, is a powerful tool for using data to make predictions about the world around us. Once you understand the basic ideas of supervised machine learning, the next step is to practice your skills so you know how to apply these techniques wisely and appropriately.
 
 In this tutorial, you will work through a case study using data from the real world; you will gain experience in exploratory data analysis, preparing data so it is ready for predictive modeling, training supervised machine learning models using **tidymodels**, and evaluating those models.
 
-Tidymodels is a R package that helps you install and manage other packages that are used for modeling and machine learning in R. It provides a unified interface to a vast array of modeling and feature engineering approaches, and encourages good statistical practice via its design. 
+Tidymodels is a R package that helps you install and manage other packages that are used for modeling and machine learning in R. It provides a unified interface to a vast array of modeling and feature engineering approaches, and encourages good statistical practice via its design.
 
-To follow this tutorial, you don't need to already have familiarity with tidymodels but you need some familiarity with **tidyverse** packages like *dplyr* and *ggplot2*, and exposure to machine learning basics. 
+To follow this tutorial, you don't need to already have familiarity with tidymodels but you need some familiarity with **tidyverse** packages like *dplyr* and *ggplot2*, and exposure to machine learning basics.
 
 **Now let's get started!**
 
@@ -136,6 +137,12 @@ ____(ameshousing)
 ```{r skim-solution}
 skim(ameshousing)
 ```
+
+**Checklist for predictors:**
+
+-   Is it ethical to use this variable? (Or even legal?)
+-   Will this variable be available at prediction time?
+-   Does this variable contribute to explainability?
 
 You need to do EDA on the outcome variable to:
 
@@ -211,7 +218,7 @@ ames_recipe %>%
 
 > The `juice()` function is a nice little shortcut. When we `juice()` the recipe, we squeeze that training data back out, transformed in the ways we specified.
 
-> A more detailed explanation on recipes is provided in *Part 3* of this Package. 
+> A more detailed explanation on recipes is provided in *Part 3* of this Package.
 
 ![](images/recipes.png){width="80%"}
 
@@ -342,6 +349,7 @@ Some other preprocessing steps can include:
 ```{r preprocessing, exercise=TRUE, exercise.blanks = "___+"}
 ames_rec <-
   ____(sale_price ~ ., data = ____) %>%
+  step_best_normalize(sale_price) %>%
   step_filter(____ <= 4000) %>%
   step_mutate(____ = year_sold - year_remod_add, 
          ____ = year_sold - year_built) %>%
@@ -357,6 +365,7 @@ ames_rec
 ```{r preprocessing-solution}
 ames_rec <-
   recipe(sale_price ~ ., data = ames_train) %>% 
+  step_best_normalize(sale_price) %>%
   step_filter(gr_liv_area <= 4000) %>%
   step_mutate(time_since_remodel = year_sold - year_remod_add, 
          house_age = year_sold - year_built) %>%
