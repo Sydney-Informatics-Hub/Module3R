@@ -121,9 +121,11 @@ What kind of model will you build?",
 )
 ```
 
-### Visualise the selling price distribution
+### Distribution, distribution, distribution
 
 Start off this case study by examining your data set and visualizing the distribution of selling price.
+
+#### Explore your dataset
 
 **Instructions** Use the `skim()` function from the *skimr* package for an initial exploration of the Ames Housing dataset `ameshousing`:
 
@@ -143,6 +145,8 @@ skim(ameshousing)
 -   Is it ethical to use this variable? (Or even legal?)
 -   Will this variable be available at prediction time?
 -   Does this variable contribute to explainability?
+
+#### Explore your outcome variable
 
 You need to do EDA on the outcome variable to:
 
