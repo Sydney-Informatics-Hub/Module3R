@@ -20,7 +20,6 @@ Imports:
     dplyr,
     learnr,
     mlbench,
-    learntidymodels,
     tidytext, 
     finetune
 Encoding: UTF-8
