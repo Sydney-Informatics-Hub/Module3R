@@ -55,7 +55,7 @@ Exercises are interactive R code chunks that allow you to directly execute R cod
 
 ### For the trainer
 
-Introduction slides for each tutorial are [here](slides/Module3R.pptx). 
+Introduction slides for the tutorials are [here](slides/Module3R.pptx). 
 Instructions for adding new tutorials are [here](https://education.rstudio.com/blog/2020/09/delivering-learnr-tutorials-in-a-package/).
 
 ## Code of Conduct
