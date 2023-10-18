@@ -25,6 +25,7 @@ Imports:
     embed,
     sortable,
     emojifont,
+    learntidymodels,
     tidytext, 
     finetune
 Encoding: UTF-8
