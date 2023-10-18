@@ -531,7 +531,7 @@ Let's use the `last_fit()` function to fit to the entire training set one time a
 -   Fit to the training set and evaluate on the testing set using `last_fit()`;
 -   Obtain the performance metrics on the test set with `collect_metrics()`:
 
-```{r test, exercise=TRUE, exercise.blanks = "___+", warning=FALSE}
+```{r test, exercise=TRUE, exercise.blanks = "___+", exercise.timelimit=800, warning=FALSE}
 set.seed(123)
 
 #Final fit on test dataset

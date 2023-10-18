@@ -20,6 +20,11 @@ Imports:
     dplyr,
     learnr,
     mlbench,
+    ranger,
+    glmnet,
+    embed,
+    sortable,
+    emojifont,
     tidytext, 
     finetune
 Encoding: UTF-8

@@ -21,6 +21,8 @@ library(vip)
 library(visdat)
 library(tidymodels)
 library(doParallel)
+library(ranger)
+library(glmnet)
 theme_set(theme_minimal())
 
 # don't echo chunks
@@ -964,7 +966,7 @@ the training data, and produce evaluations based on the test set.
 -   Fit to the training set and evaluate on the testing set using
     `last_fit()`.
 
-```{r update, exercise=TRUE, exercise.blanks = "___+"}
+```{r update, exercise=TRUE, exercise.blanks = "___+", exercise.timelimit=800}
 set.seed(123)
 
 final_diabetes_fit <- diabetes_wf_set %>%
@@ -1090,7 +1092,7 @@ In order to visualize the variable importance scores of our  model, we will need
 -   extract the trained model with the `pull_workflow_fit()` function;
 -   pass the trained model to the `vip()` function.
 
-```{r vip, exercise=TRUE, exercise.blanks = "___+"}
+```{r vip, exercise=TRUE, exercise.blanks = "___+", exercise.timelimit=800}
 #extract the final workflow
 final_workflow <- diabetes_wf_set %>%
   extract_workflow("recipe_logistic_reg") %>%

@@ -6,6 +6,9 @@ output:
     allow_skip: false
     theme: "readable"
 runtime: shiny_prerendered
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r setup, include=FALSE}
@@ -16,8 +19,11 @@ library(embed)
 library(tidytext)
 library(sortable)
 library(ggcorrplot)
+library(embed)
+library(sortable)
 #library(learntidymodels)
 library(doParallel)
+library(emojifont)
 library(finetune)
 theme_set(theme_minimal())
 
@@ -147,33 +153,34 @@ zoo_res <-
 
 Dimension reduction is a regularly used unsupervised method in exploratory data analysis and predictive models.
 
-This tutorial focuses on *transforming whole groups of predictors together* using **Linear dimensionality reduction** with [Principal component analysis (PCA)](https://en.wikipedia.org/wiki/Principal_component_analysis).   
+This tutorial focuses on *transforming whole groups of predictors together* using **Linear dimensionality reduction** with [Principal component analysis (PCA)](https://en.wikipedia.org/wiki/Principal_component_analysis).
 
-This methods can also be used for [feature extraction](https://en.wikipedia.org/wiki/Feature_extraction) prior to modeling. 
+This methods can also be used for [feature extraction](https://en.wikipedia.org/wiki/Feature_extraction) prior to modeling.
 
 While we're applying this method we will getter a better understanding on topics we have already discussed in **Part 1** and **Part 2** of this module like:
 
-+ How to create a `recipe`
-+ How to update a `role`
-+ How to add `steps`
-+ How to `prep`
-+ How to `bake` or `juice`
-+ A modeling workflow
+-   How to create a `recipe`
+-   How to update a `role`
+-   How to add `steps`
+-   How to `prep`
+-   How to `bake` or `juice`
+-   A modeling workflow
 
 ## Exploratory Data Analysis
 
-Before beginning any dimensionality reduction, we can spend some time investigating our data. 
-We will use the `zoo` dataset to explore these methods. `zoo` contains observations collected on `r nrow(zoo)` zoo animals.
+Before beginning any dimensionality reduction, we can spend some time investigating our data.
+We will use the `zoo` dataset to explore these methods.
+`zoo` contains observations collected on `r nrow(zoo)` zoo animals.
 
-**Instructions** To see the first ten rows of the data set click on **Run Code**.   
+**Instructions** To see the first ten rows of the data set click on **Run Code**.\
 You can use the black triangle that appears at the top right of the table to scroll through all of the columns in `zoo`.
-
 
 ```{r intro-zoo, exercise=TRUE}
 zoo
 ```
 
-Alternatively, use the `glimpse()` function to see columns in a more compact way. You can click on the **Solution** button to get help.
+Alternatively, use the `glimpse()` function to see columns in a more compact way.
+You can click on the **Solution** button to get help.
 
 ```{r glimpse-zoo, exercise=TRUE, warning=FALSE, message=FALSE, error=FALSE}
 glimpse(___)
@@ -183,7 +190,7 @@ glimpse(___)
 glimpse(zoo)
 ```
 
-We can see that `zoo` has `r nrow(zoo)` rows and `r ncol(zoo)` columns, two of them (`animal_name` and `animal_type`) are characters. 
+We can see that `zoo` has `r nrow(zoo)` rows and `r ncol(zoo)` columns, two of them (`animal_name` and `animal_type`) are characters.
 Let's count the number animals for each `animal_type`.
 
 ```{r cnt-type, exercise=TRUE}
@@ -198,7 +205,8 @@ zoo %>%
 
 While looking at the numbers helps, plotting is always a good idea to get an overall view of the data, especially if many sub-categories are present.
 
-**Instructions** Plot the number of animals in each `animal_type` category. Fill in the blanks and click on **Run Code** to generate the plot.
+**Instructions** Plot the number of animals in each `animal_type` category.
+Fill in the blanks and click on **Run Code** to generate the plot.
 
 ```{r type-bar, exercise=TRUE}
 zoo %>%
@@ -214,9 +222,10 @@ zoo %>%
   theme_minimal()
 ```
 
-We can also look at the distribution of animals that lay `eggs` across `animal_type`. 
-*Note*: The `eggs` column is coded in `0` and `1` for animals that `"doesn't lay eggs"` and `"lay eggs"` respectively. 
-Let's do some data wrangling with the `recode()` function to plot it neatly. Click on **Solution** if you are stuck.
+We can also look at the distribution of animals that lay `eggs` across `animal_type`.
+*Note*: The `eggs` column is coded in `0` and `1` for animals that `"doesn't lay eggs"` and `"lay eggs"` respectively.
+Let's do some data wrangling with the `recode()` function to plot it neatly.
+Click on **Solution** if you are stuck.
 
 ```{r type-eggs-bar, exercise=TRUE}
 zoo %>%
@@ -238,7 +247,7 @@ zoo %>%
   theme(legend.position = "top")
 ```
 
-Not so surprisingly there are very few mammals that lay eggs. 
+Not so surprisingly there are very few mammals that lay eggs.
 Let's get the actual count.
 
 ```{r cnt-type-eggs, exercise=TRUE}
@@ -271,11 +280,13 @@ zoo %>%
 
 ### Analyse correlated variables
 
-Having some familiarity with the animal kingdom, we would expect that most animals that produce milk do not lay eggs. In other words, we would expect to see a negative correlation between these features.
+Having some familiarity with the animal kingdom, we would expect that most animals that produce milk do not lay eggs.
+In other words, we would expect to see a negative correlation between these features.
 
 Let's see how these animal features correlate with each other to get a sense of these relationships.
 
-**Instructions** Use the `cor()` function on the numerical variables from the `zoo` dataset and the `cor_pmat()` function to compute the p-values of correlation. Then, use `ggcorrplot()` to plot the correlation and correlation significance level.
+**Instructions** Use the `cor()` function on the numerical variables from the `zoo` dataset and the `cor_pmat()` function to compute the p-values of correlation.
+Then, use `ggcorrplot()` to plot the correlation and correlation significance level.
 
 ```{r correlation, exercise=TRUE, exercise.blanks = "___+"}
 # pull out all of the numerical variables
@@ -308,9 +319,9 @@ ggcorrplot(zooCor,
            p.mat = zooCor_pvalues)
 ```
 
-We can see that producing eggs or milk have a very strong negative correlation. 
+We can see that producing eggs or milk have a very strong negative correlation.
 
-Now, see if you can answer the question correctly. 
+Now, see if you can answer the question correctly.
 
 ```{r corr-quiz, echo=FALSE}
 question("What is the pair of animal features that has the strongest _positive_ correlation?",
@@ -325,8 +336,10 @@ question("What is the pair of animal features that has the strongest _positive_ 
 
 ## Principal component analysis
 
-
-[Principal component analysis (PCA)](https://en.wikipedia.org/wiki/Principal_component_analysis) is a handy data reduction technique that uses covariance or a correlation matrix of a set of observed variables (just like the one we visualized) and summarizes it with a smaller set of linear combinations called principal components (PC). These components are statistically independent from one another and capture the maximum amount of information (i.e. variance) in the original variables. This means these components can be used to combat large inter-variable correlations in a data set statistical modeling. PCA can also help us explore the similarities between observations and groups they belong to.
+[Principal component analysis (PCA)](https://en.wikipedia.org/wiki/Principal_component_analysis) is a handy data reduction technique that uses covariance or a correlation matrix of a set of observed variables (just like the one we visualized) and summarizes it with a smaller set of linear combinations called principal components (PC).
+These components are statistically independent from one another and capture the maximum amount of information (i.e. variance) in the original variables.
+This means these components can be used to combat large inter-variable correlations in a data set statistical modeling.
+PCA can also help us explore the similarities between observations and groups they belong to.
 
 Here's the scatter plot with the first two principle components (PC1 and PC2) of the zoo data:
 
@@ -339,16 +352,16 @@ pca_bake %>%
   theme_minimal()
 ```
 
-Each dot on the plot represents an observation (animal) that is colored by the `animal_type` and labeled by `animal_name`. 
+Each dot on the plot represents an observation (animal) that is colored by the `animal_type` and labeled by `animal_name`.
 
-Overall, we can see that same type of animals are clustered closely compared to the rest. This suggests that these features (having hair, feathers, or laying eggs etc.) are doing a relatively good job at identifying the clusters within the zoo data.
+Overall, we can see that same type of animals are clustered closely compared to the rest.
+This suggests that these features (having hair, feathers, or laying eggs etc.) are doing a relatively good job at identifying the clusters within the zoo data.
 
 ### Your data budget
 
 It is important to maintain good data discipline when evaluating dimensionality reduction techniques, especially if you will use them within a model.
-For our analyses, we start by holding back a testing set with `initial_split()`. 
-We can also create a cross-validated version of the
-training set in preparation for hyperparameters tuning.
+For our analyses, we start by holding back a testing set with `initial_split()`.
+We can also create a cross-validated version of the training set in preparation for hyperparameters tuning.
 
 **Instructions**
 
@@ -385,7 +398,7 @@ glimpse(zoo_train)
 glimpse(zoo_test)
 ```
 
-### Preprocessing steps 
+### Preprocessing steps
 
 Let's implement principal component analysis (PCA) using [recipes](https://recipes.tidymodels.org/).
 
@@ -397,11 +410,13 @@ pca_rec <- recipe( ~ ., data = ___) # use all the variables
 
 ```{r recstart-solution}
 pca_rec <- recipe( ~ ., data = zoo_train) 
-```  
+```
 
-Once we initiate the recipe, we can keep adding new [roles](https://tidymodels.github.io/recipes/reference/roles.html) and **steps**. 
+Once we initiate the recipe, we can keep adding new [roles](https://tidymodels.github.io/recipes/reference/roles.html) and **steps**.
 
-For example, we already told our recipe to include all variables with our formula; however, we want to exclude identifier column `animal_name` and `animal_type` from our analysis. On the other hand we need these variables later when we are plotting our results. By using `update_role()` we exclude these variables from our analysis *without* completely dropping them in the next steps:
+For example, we already told our recipe to include all variables with our formula; however, we want to exclude identifier column `animal_name` and `animal_type` from our analysis.
+On the other hand we need these variables later when we are plotting our results.
+By using `update_role()` we exclude these variables from our analysis *without* completely dropping them in the next steps:
 
 ```{r role, exercise=TRUE}
 pca_rec <- recipe(~., data = zoo_train) %>%
@@ -426,14 +441,16 @@ summary(pca_rec) %>%
   arrange(role)
 ```
 
-We can see that the role of `animal_name` and `animal_type` is now defined as `id` and the remaining variables are listed as `predictor`. 
+We can see that the role of `animal_name` and `animal_type` is now defined as `id` and the remaining variables are listed as `predictor`.
 
-Good job! Now, let's add some steps to our recipe.
+Good job!
+Now, let's add some steps to our recipe.
 
-**Instructions** Since PCA is a variance maximizing exercise, it is important to scale variables so their variance is commensurable. We will achieve this by adding two *steps* to our recipe:   
+**Instructions** Since PCA is a variance maximizing exercise, it is important to scale variables so their variance is commensurable.
+We will achieve this by adding two *steps* to our recipe:
 
-- `step_scale()` normalizes numeric data to have a standard deviation of one 
-- `step_center()` normalizes numeric data to have a mean of zero.
+-   `step_scale()` normalizes numeric data to have a standard deviation of one
+-   `step_center()` normalizes numeric data to have a mean of zero.
 
 We can also use the helper function `all_predictors()` to select all the variables that have a role defined as `predictor`.
 
@@ -452,7 +469,9 @@ pca_rec <- recipe(~., data = zoo_train) %>%
   step_center(all_predictors())
 ```
 
-Alternatively, we can accomplish scaling and centering in one single step. Take a look [this group of step functions](https://recipes.tidymodels.org/reference/index.html#section-step-functions-normalization) on the recipes reference page. See if you can answer the question below correctly:
+Alternatively, we can accomplish scaling and centering in one single step.
+Take a look [this group of step functions](https://recipes.tidymodels.org/reference/index.html#section-step-functions-normalization) on the recipes reference page.
+See if you can answer the question below correctly:
 
 ```{r step-quiz, echo=FALSE}
 question("What function can replace both centering and scaling steps?",
@@ -465,7 +484,7 @@ question("What function can replace both centering and scaling steps?",
          )
 ```
 
-We are ready to add our final step to compute our principle components!  
+We are ready to add our final step to compute our principle components!
 
 **Instructions** Use `step_pca()` to tell the recipe to convert all variables (except `animal_name` and `animal_type`) into principal components.
 
@@ -486,7 +505,10 @@ pca_rec <- recipe(~., data = zoo_train) %>%
   step_pca(all_predictors(), id = "pca")
 ```
 
-Did you notice the additional argument `id = "pca"` there? If we take a look at the [`step_pca` help page](https://recipes.tidymodels.org/reference/step_pca.html), we see that this argument allows us to provide a unique string to identify this step. Providing a step `id` will become handy when we need to extract additional values from that step. Similarly, we could have assigned a unique id to any step we would like to work more on later.
+Did you notice the additional argument `id = "pca"` there?
+If we take a look at the [`step_pca` help page](https://recipes.tidymodels.org/reference/step_pca.html), we see that this argument allows us to provide a unique string to identify this step.
+Providing a step `id` will become handy when we need to extract additional values from that step.
+Similarly, we could have assigned a unique id to any step we would like to work more on later.
 
 Now, let's print the `pca_rec` by running the following code chunk.
 
@@ -496,16 +518,18 @@ pca_rec
 
 We can see that `pca_rec` has our *id* and *predictor* variables as inputs and the following operations:
 
-- Scaling for all_predictors
-- Centering for all_predictors
-- No PCA components were extracted.
+-   Scaling for all_predictors
+-   Centering for all_predictors
+-   No PCA components were extracted.
 
-Are you surprised that we haven't extracted the PCA components yet? This is because so far we only  *defined* our recipe, but did not *train* it. To get the results from our PCA, we need to evaluate our recipe using `prep()`. 
+Are you surprised that we haven't extracted the PCA components yet?
+This is because so far we only *defined* our recipe, but did not *train* it.
+To get the results from our PCA, we need to evaluate our recipe using `prep()`.
 
 ### Prep a recipe & Feature Extraction
 
 Let's prep our recipe and print the output:
-  
+
 ```{r pca-prep, exercise=TRUE}
 pca_prep <- prep(___)
 pca_prep
@@ -516,7 +540,8 @@ pca_prep <- prep(pca_rec)
 pca_prep
 ```
 
-Can you see the difference between the outputs of `pca_rec` and `pca_prep`? After *prepping* we can see that scaling and centering, and PCA extraction with all columns of interest has been *trained*.
+Can you see the difference between the outputs of `pca_rec` and `pca_prep`?
+After *prepping* we can see that scaling and centering, and PCA extraction with all columns of interest has been *trained*.
 
 Let's take a look at the steps this recipe contains with `tidy()`:
 
@@ -528,11 +553,11 @@ tidy(___)
 tidy(pca_prep)
 ```
 
-We can see that three steps are contained in this prepped recipe: 
+We can see that three steps are contained in this prepped recipe:
 
-1. `scale`  
-1. `center`
-1. `pca` 
+1.  `scale`\
+2.  `center`
+3.  `pca`
 
 With `tidy()` we can extract the *intermediate values* computed in each step by providing its `number` as an argument to `tidy()`.
 
@@ -556,11 +581,15 @@ tidy(___, ___)
 tidy(pca_prep, 3)
 ```
 
-> You can see that these *underlying values* can be different for each step, but are always called `values` when extracted with the `tidy` method. You can find the definition of these *underlying values* under the **value** section in the help page of the related step function. For example, take a look at [`step_scale` help document](https://recipes.tidymodels.org/reference/step_scale.html) and scroll down to see the *value*.
+> You can see that these *underlying values* can be different for each step, but are always called `values` when extracted with the `tidy` method.
+> You can find the definition of these *underlying values* under the **value** section in the help page of the related step function.
+> For example, take a look at [`step_scale` help document](https://recipes.tidymodels.org/reference/step_scale.html) and scroll down to see the *value*.
 
 **Instructions** Alternatively, we can use the `id` argument (the one we specifically provided for this step) and specify the `type` of *underlying value* we would like to extract.
 
-> Note: How do we know what to extract? Take a look at the [`step_pca` help document](https://recipes.tidymodels.org/reference/step_pca.html). The `type` argument provides more details about how to use this step with the `tidy()` method.
+> Note: How do we know what to extract?
+> Take a look at the [`step_pca` help document](https://recipes.tidymodels.org/reference/step_pca.html).
+> The `type` argument provides more details about how to use this step with the `tidy()` method.
 
 ```{r tidy-pca-id, exercise=TRUE}
 pca_loading <- tidy(___, id = ___, type = ___)
@@ -574,15 +603,17 @@ pca_loading <- tidy(pca_prep, id = "pca", type = "coef")
 pca_loading
 ```
 
-In the PCA setting, `loadings` indicate the correlation between the principal component and the variable. In other words, large loadings suggest that a variable has a strong effect on that principal component.
+In the PCA setting, `loadings` indicate the correlation between the principal component and the variable.
+In other words, large loadings suggest that a variable has a strong effect on that principal component.
 
 Let's take a look at loadings we generated with the zoo data!
 
-We will use `plot_top_loadings()` function from the **learntidymodels** package to plot the absolute values of the loadings to easily compare them, and color it by the direction of the loading (positive or negative). The `plot_top_loadings()` takes three arguments: 
+We will use `plot_top_loadings()` function from the **learntidymodels** package to plot the absolute values of the loadings to easily compare them, and color it by the direction of the loading (positive or negative).
+The `plot_top_loadings()` takes three arguments:
 
-- A prepped recipe;   
-- Conditional statements to filter the PCA data before plotting. For example, to plot first 3 components, one can provide `component_number <= 3`.   
-- Number of columns to plot per component.
+-   A prepped recipe;\
+-   Conditional statements to filter the PCA data before plotting. For example, to plot first 3 components, one can provide `component_number <= 3`.\
+-   Number of columns to plot per component.
 
 **Instructions** Fill in the blanks to plot the *first four* principle components and *top six* variables with largest absolute loadings:
 
@@ -598,19 +629,24 @@ plot_top_loadings(pca_prep, component_number <= 4, n = 6) +
   theme_minimal()
 ```
 
-It looks like PC1 (first principal component) is mostly about producing milk or eggs, and having hair. Notice the loading direction for milk and hair are the same, which is the opposite of eggs. Do you remember the strongest positive correlation we found? On the other hand, PC2 seems to be about the animal having a fin, which has the opposite direction to breathing. Both tails, backbone and feathers have a strong correlation with PC3, and finally, PC4 is mostly about being domestic or a predator, which have opposite directions. Overall, we can say that PC1 is mostly about being a *mammal*, PC2 is being a *fish* or an *aquatic animal*, PC3 is being a *bird*, and PC4 is about being domesticated.
+It looks like PC1 (first principal component) is mostly about producing milk or eggs, and having hair.
+Notice the loading direction for milk and hair are the same, which is the opposite of eggs.
+Do you remember the strongest positive correlation we found?
+On the other hand, PC2 seems to be about the animal having a fin, which has the opposite direction to breathing.
+Both tails, backbone and feathers have a strong correlation with PC3, and finally, PC4 is mostly about being domestic or a predator, which have opposite directions.
+Overall, we can say that PC1 is mostly about being a *mammal*, PC2 is being a *fish* or an *aquatic animal*, PC3 is being a *bird*, and PC4 is about being domesticated.
 
 ### Bake a recipe
 
 So far we:
 
-- Defined preprocessing operations with `recipe`;   
-- Trained our recipe with `prep`. 
+-   Defined preprocessing operations with `recipe`;\
+-   Trained our recipe with `prep`.
 
 **Instructions** In order to apply these computations to our data and extract the principal components, we will use the `bake()` by providing two arguments:
 
-- A prepped (trained) recipe;  
-- The data we would like to apply these computations to.
+-   A prepped (trained) recipe;\
+-   The data we would like to apply these computations to.
 
 ```{r bake, exercise=TRUE}
 pca_bake <- bake(___, ___)
@@ -622,7 +658,8 @@ pca_bake <- bake(pca_prep, zoo)
 pca_bake
 ```
 
-Now that we got our principal components, we are ready to plot them! `r emojifont::emoji('tada')`
+Now that we got our principal components, we are ready to plot them!
+`r emojifont::emoji('tada')`
 
 Let's plot the first two principal components, while labeling our points with `animal_name` and coloring them by `animal_type`.
 
@@ -644,11 +681,21 @@ pca_bake %>%
   theme_minimal()
 ```
 
-We were able reproduce our initial plot! Let's take a look at our plot in more detail.
+We were able reproduce our initial plot!
+Let's take a look at our plot in more detail.
 
-Look at *mammals*, majority of these animals are separated from the other types of animals across the PC1 axis. Recall our plot with loadings: `milk` and `eggs` were the top two features with largest loadings for PC1. Interestingly, platypus is placed closer to *reptiles* on the PC1 axis. This is likely driven by laying eggs and not having teeth. On the other hand, dolphin is located closer to *fish*, and separate from rest of the mammals on the PC2 axis. Do you remember the top two loadings for PC2? It was `fins` and `aquatic`! Do you see the pattern here? 
+Look at *mammals*, majority of these animals are separated from the other types of animals across the PC1 axis.
+Recall our plot with loadings: `milk` and `eggs` were the top two features with largest loadings for PC1.
+Interestingly, platypus is placed closer to *reptiles* on the PC1 axis.
+This is likely driven by laying eggs and not having teeth.
+On the other hand, dolphin is located closer to *fish*, and separate from rest of the mammals on the PC2 axis.
+Do you remember the top two loadings for PC2?
+It was `fins` and `aquatic`!
+Do you see the pattern here?
 
-A common practice when conducting PCA is to check how much variability in the data is captured by principal components. Typically, this is achieved by looking at the eigenvalues or their percent proportion for each component. Let's extract variance explained by each principal component using the `tidy()` method.
+A common practice when conducting PCA is to check how much variability in the data is captured by principal components.
+Typically, this is achieved by looking at the eigenvalues or their percent proportion for each component.
+Let's extract variance explained by each principal component using the `tidy()` method.
 
 ```{r var-exp1, exercise=TRUE}
 pca_variances <- tidy(pca_prep, id = "pca", type = "variance")
@@ -693,7 +740,9 @@ pca_variances %>%
   theme_minimal()
 ```
 
-We can see that first three principal components explain majority of the variance in the data. But it is difficult to see the cumulative variance explained in this plot. Let's tweak the `filter()` function to plot the cumulative variance explained:
+We can see that first three principal components explain majority of the variance in the data.
+But it is difficult to see the cumulative variance explained in this plot.
+Let's tweak the `filter()` function to plot the cumulative variance explained:
 
 ```{r cum-var-plot, exercise=TRUE}
 pca_variances %>%
@@ -714,7 +763,9 @@ pca_variances %>%
   theme_minimal()
 ```
 
-We can see that 50% of the variance is explained by the first two components. If we were to use more components, we can capture even more variance in the data. That is why it is also common to plot multiple components to get a better idea of the data.
+We can see that 50% of the variance is explained by the first two components.
+If we were to use more components, we can capture even more variance in the data.
+That is why it is also common to plot multiple components to get a better idea of the data.
 
 Try plotting PC1 and PC3, do you see other clusters in the data that wasn't as obvious with PC1 and PC2?
 
@@ -740,17 +791,18 @@ pca_bake %>%
 
 The purpose for the zoo dataset is to be able to predict the classification of the animals, based upon the variables.
 
-Let’s explore a variety of different models with this dimensionality reduction technique (along with no transformation at all): a *multinomial regression* and *random forest* models. The `multinom_reg()` function defines a model that uses linear predictors to predict multiclass data using the multinomial distribution. This function can fit classification models.
+Let's explore a variety of different models with this dimensionality reduction technique (along with no transformation at all): a *multinomial regression* and *random forest* models.
+The `multinom_reg()` function defines a model that uses linear predictors to predict multiclass data using the multinomial distribution.
+This function can fit classification models.
 
-Now that we are back in “modeling mode,” we’ll create a series of model specifications and then use a workflow set to tune our models in the following code. 
+Now that we are back in "modeling mode," we'll create a series of model specifications and then use a workflow set to tune our models in the following code.
 
 > Note that the model parameters are tuned in conjunction with the recipe parameters (e.g., size of the reduced dimension).
 
-**Instructions**    
+**Instructions**
 
 -   Use `multinom_reg()` to specify a multinomial model and that the `penalty` and `mixture` hyperparameter need to be tuned;
--   Specify a random forest model with the `rand_forest()`
-    function with 1000 trees.
+-   Specify a random forest model with the `rand_forest()` function with 1000 trees.
 
 ```{r models, exercise=TRUE, exercise.blanks = "___+"}
 # multinomial model
@@ -786,16 +838,14 @@ rf_spec <- rand_forest(trees = 1000) %>%
   set_engine("ranger")
 ```
 
-We also need recipes for the dimensionality reduction method. 
-Let’s start with a base recipe `base_rec` and then extend it with a dimensionality reduction step.
+We also need recipes for the dimensionality reduction method.
+Let's start with a base recipe `base_rec` and then extend it with a dimensionality reduction step.
 
 **Instructions** Use the `recipe()` function to:
 
 -   specify your outcome/target is `animal_type`;
--   normalize the data to a standard range by dividing each observation
-    by the standard deviation of the feature using `step_normalize()`;
--   use `step_pca()` to create `rec_pca` and convert numeric data into one or more principal components (i.e. tune the `num_comp` hyperparameter). 
-
+-   normalize the data to a standard range by dividing each observation by the standard deviation of the feature using `step_normalize()`;
+-   use `step_pca()` to create `rec_pca` and convert numeric data into one or more principal components (i.e. tune the `num_comp` hyperparameter).
 
 ```{r recstart2, exercise=TRUE}
 #your basic recipe
@@ -825,11 +875,13 @@ rec_pca <- recipe(animal_type ~ ., data = zoo_train) %>%
   step_normalize(all_numeric_predictors()) %>%
   step_dummy(all_nominal_predictors(), one_hot = FALSE) %>%
   step_pca(all_numeric_predictors(), num_comp = tune())
-``` 
+```
 
-Once again, the **workflowsets** package takes the preprocessors and models and crosses them. `The workflow_map()` function applies grid search to optimize the model/preprocessing parameters (if any) across 10 parameter combinations. The multiclass area under the ROC curve is estimated on the training set.
+Once again, the **workflowsets** package takes the preprocessors and models and crosses them.
+`The workflow_map()` function applies grid search to optimize the model/preprocessing parameters (if any) across 10 parameter combinations.
+The multiclass area under the ROC curve is estimated on the training set.
 
-**Instructions** 
+**Instructions**
 
 -   Use the `workflow_set()` function to combine your models with your recipes;
 -   Call the `tune_grid()` function within `workflow_map()` and add your resampling object.
@@ -867,7 +919,8 @@ zoo_wf_set_tuning <- zoo_wf_set %>%
                    verbose = TRUE)
 ```
 
-We can rank the models by their training set estimates of the area under the ROC curve. Run the following code to have a look at this: 
+We can rank the models by their training set estimates of the area under the ROC curve.
+Run the following code to have a look at this:
 
 ```{r run, exercise=TRUE}
 rankings <- 
@@ -903,17 +956,16 @@ rankings %>%
   lims(y = c(0.9, NA))
 ```
 
-It is clear from these results that most models give very good performance; there are few bad choices here. For demonstration, we’ll use the **multinomial** model with **basic** features as the final model. We will finalize the workflow with the numerically best parameters, fit it to the training set, then evaluate with the test set. 
+It is clear from these results that most models give very good performance; there are few bad choices here.
+For demonstration, we'll use the **multinomial** model with **basic** features as the final model.
+We will finalize the workflow with the numerically best parameters, fit it to the training set, then evaluate with the test set.
 
-**Instructions** We have already discussed the functions below in *Part 2* of this package, let's see if we can pipe them all together: 
+**Instructions** We have already discussed the functions below in *Part 2* of this package, let's see if we can pipe them all together:
 
--   Use the `extract_workflow()` function to extract the specifications
-    of your best workflow (`basic_multi`);
--   Update your workflow with your optimal model using
-    the `finalize_workflow()` and function;
--   Fit to the training set and evaluate on the testing set using
-    `last_fit()`.
-    
+-   Use the `extract_workflow()` function to extract the specifications of your best workflow (`basic_multi`);
+-   Update your workflow with your optimal model using the `finalize_workflow()` and function;
+-   Fit to the training set and evaluate on the testing set using `last_fit()`.
+
 ```{r last_fit, exercise=TRUE, exercise.blanks = "___+", warning=FALSE}
 zoo_res <- 
   zoo_wf_set_tuning %>% 
@@ -942,7 +994,8 @@ zoo_res <-
            control = control_last_fit(allow_par = TRUE))
 ```
 
-What are the results for our metric (multiclass ROC AUC) on the testing set? Do you remember which function we can use to extract this information?
+What are the results for our metric (multiclass ROC AUC) on the testing set?
+Do you remember which function we can use to extract this information?
 
 ```{r res, exercise=TRUE, exercise.blanks = "___+", warning=FALSE}
 ____(zoo_res)
@@ -952,25 +1005,30 @@ ____(zoo_res)
 collect_metrics(zoo_res)
 ```
 
-## BONUS 
+## BONUS
 
-Good job! You completed all the steps and applied dimensionality reduction to the `zoo` data set using the [recipes](https://recipes.tidymodels.org/) package from tidymodels! `r emojifont::emoji('star2')` But before you start your victory lap, let's go over what we learned one last time.
+Good job!
+You completed all the steps and applied dimensionality reduction to the `zoo` data set using the [recipes](https://recipes.tidymodels.org/) package from tidymodels!
+`r emojifont::emoji('star2')` But before you start your victory lap, let's go over what we learned one last time.
 
 To implement dimensionality reduction we took the following steps:
 
-- Create a recipe using a data set and formula with `recipe()`       
-- Update variable roles with `update_role()`   
-- Define pre-processing steps with `step_*()`
-- Train pre-processing steps with `prep()`
-- Apply computations and extract pre-processed data with `bake()`
+-   Create a recipe using a data set and formula with `recipe()`\
+-   Update variable roles with `update_role()`\
+-   Define pre-processing steps with `step_*()`
+-   Train pre-processing steps with `prep()`
+-   Apply computations and extract pre-processed data with `bake()`
 
 ![](images/recipes.png){width="80%"}
 
-Throughout this tutorial, we used `bake` to apply the computations from a *trained recipe* to our data set. The `bake` method is great because it allows us to apply a set specifications and computations generated with `prep` to our data of choice. This is especially handy when you are dealing with training or test sets during your modeling process. 
+Throughout this tutorial, we used `bake` to apply the computations from a *trained recipe* to our data set.
+The `bake` method is great because it allows us to apply a set specifications and computations generated with `prep` to our data of choice.
+This is especially handy when you are dealing with training or test sets during your modeling process.
 
-However, if we simply want to extract the computations generated with `prep()` and don't need to reapply them to a new data set, we can simply use `juice`. 
+However, if we simply want to extract the computations generated with `prep()` and don't need to reapply them to a new data set, we can simply use `juice`.
 
-**Instructions** Let's create our recipe, add steps and train with `prep` one last time. Then extract principal components first with `bake` and then with `juice`.
+**Instructions** Let's create our recipe, add steps and train with `prep` one last time.
+Then extract principal components first with `bake` and then with `juice`.
 
 ```{r juice-1, exercise=TRUE}
 zoo_rec <- recipe(data = zoo_train, formula = ~.) %>%
@@ -998,7 +1056,8 @@ zoo_bake <- bake(zoo_prep, zoo)
 zoo_bake
 ```
 
-Now, let's juice! `r emojifont::emoji('tropical_drink')`
+Now, let's juice!
+`r emojifont::emoji('tropical_drink')`
 
 ```{r juice-2, exercise = TRUE}
 # juice
@@ -1012,7 +1071,8 @@ zoo_juice <- juice(zoo_prep)
 zoo_juice
 ```
 
-Do you see any difference in the output between bake or juice? Let's compare them with base R function `all.equal()`, which simply returns `TRUE` if the compared objects are identical:
+Do you see any difference in the output between bake or juice?
+Let's compare them with base R function `all.equal()`, which simply returns `TRUE` if the compared objects are identical:
 
 ```{r comp-juice-bake, exercise = TRUE}
 all.equal(___, ___)
@@ -1022,6 +1082,10 @@ all.equal(___, ___)
 all.equal(zoo_bake, zoo_juice)
 ```
 
->Congratulations! You've completed the tutorial! It's time for your victory lap! `r emojifont::emoji('runner')`
+> Congratulations!
+> You've completed the tutorial!
+> It's time for your victory lap!
+> `r emojifont::emoji('runner')`
 
->Equipped with the necessary know-how, you are now ready to apply these tools in the wild. If you ever face obstacles on your journey, [Contact Us](https://sydney.au1.qualtrics.com/jfe/form/SV_5mXyhFZsPIwZDBs) or come along to our [Hacky Hour](https://www.sydney.edu.au/research/facilities/sydney-informatics-hub/workshops-and-training/hacky-hour.html)! 
+> Equipped with the necessary know-how, you are now ready to apply these tools in the wild.
+> If you ever face obstacles on your journey, [Contact Us](https://sydney.au1.qualtrics.com/jfe/form/SV_5mXyhFZsPIwZDBs) or come along to our [Hacky Hour](https://www.sydney.edu.au/research/facilities/sydney-informatics-hub/workshops-and-training/hacky-hour.html)!
