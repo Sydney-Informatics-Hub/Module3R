@@ -1,0 +1,377 @@
+---
+title: "Machine Learning in R"
+author: "Sydney Informatics Hub"
+output: html_document
+---
+
+## MLR
+
+This is the code for the MLR workshops condensed into one RMD file for your convenience.
+
+Some useful links: 
+
+* List of recipe steps and functions: https://www.tidymodels.org/find/recipes/
+* List of models and their engines, see: https://www.tidymodels.org/find/parsnip/
+* TBA
+* TBA
+
+```{r setup environment, include=FALSE}
+# load packages
+library(learnr)
+library(tidyverse)
+library(naniar)
+library(GGally)
+library(ggcorrplot)
+library(AmesHousing)
+library(plotly)
+library(bestNormalize)
+library(janitor)
+library(skimr)
+library(here)
+library(randomForest)
+library(vip)
+library(tidymodels)
+library(parallel)
+library(doParallel)
+theme_set(theme_minimal())
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+```
+
+## Regression Models
+
+Substitute with your own input data, make sure it is cleaned and formatted appropriately (ideally as a csv):
+
+* Each variable must have its own column;
+* Each observation must have its own row;
+* Each value must have its own cell.
+
+```{r read in dataframe for regression model}
+ameshousing <- AmesHousing::make_ames() %>% 
+  janitor::clean_names()
+```
+
+### EDA
+
+```{r EDA}
+skim(ameshousing) #What can you figure out about the different variables? Which do you think are more or less important?
+
+#distribution of selling price
+ameshousing %>% 
+  ggplot(aes(x = sale_price)) + 
+  geom_histogram(bins = 50) + 
+  labs(x = "Sale Price",
+       y = "Number of Houses sold")
+
+# #check distribution of normalized selling price
+# ames_recipe <- recipe(sale_price ~ ., data = ameshousing) %>%
+#   step_best_normalize(sale_price)
+# 
+# ames_recipe 
+# 
+# ames_recipe %>% prep() %>% tidy(number = 1)
+# 
+# ames_recipe %>%
+#   prep() %>%
+#   juice() %>%
+#   ggplot(aes(x = sale_price)) + 
+#   geom_histogram(bins = 50) + 
+#   labs(x = "Sale Price",
+#        y = "Number of Houses sold")
+
+#analyse correlated variables
+numVars <- ameshousing %>% 
+  select_if(is.numeric) %>%
+  names()
+
+ameshousingCor <- cor(ameshousing[,numVars],
+                      use = "pairwise.complete.obs")
+
+ameshousingCor_pvalues <- cor_pmat(ameshousingCor)
+
+ggcorrplot(ameshousingCor,
+           type = "lower", 
+           p.mat = ameshousingCor_pvalues)
+
+# #check relationship with the most co-correlated variables
+# ameshousing %>%
+#   ggplot(aes(x = gr_liv_area, y = sale_price/1000)) + 
+#   geom_point(alpha = 0.1) + 
+#   labs(y = "Sale Price/$1000",
+#        x = "Living Area (sq.ft)",
+#        title = "Ames Housing Data") +
+#   geom_smooth(method= "lm")
+```
+
+### Splitting the data into training and testing
+
+```{r}
+set.seed(123)
+
+ames_split <- ameshousing %>%
+    initial_split(prop = 0.8, #80/20, 70/30 or 60/40 split depending on your dataset
+                  strata = sale_price) #replace with your outcome variable
+
+ames_train <- training(ames_split)
+ames_test <- testing(ames_split)
+
+glimpse(ames_train)
+glimpse(ames_test)
+```
+
+```{r}
+ames_folds <- vfold_cv(ames_train, v = 10, repeats = 5) #resampling for cross-validation
+
+glimpse(ames_folds)
+```
+
+### Create recipe for data pre-processing
+
+```{r}
+ames_rec <-
+  recipe(sale_price ~ ., data = ames_train) %>%
+  step_best_normalize(sale_price) %>% #EDA on outcome variable shows that it needs to be normalized 
+  step_filter(gr_liv_area <= 4000) %>%
+  step_mutate(time_since_remodel = year_sold - year_remod_add, 
+         house_age = year_sold - year_built) %>%
+  step_select(-year_remod_add, -year_built) %>%
+  step_nzv(all_predictors()) %>% #remove predictors that are highly sparse and unbalanced
+  step_normalize(all_numeric_predictors()) %>% #normalize the data to a standard range by dividing each observation by the standard deviation of the feature
+  step_dummy(all_nominal_predictors(), one_hot = FALSE) #create numeric representations of categorical data
+
+ames_rec
+```
+
+### Specify models and engines
+
+```{r}
+ames_lm <- linear_reg() %>% 
+  set_engine("lm")
+```
+
+### Set up grid for tuning
+
+```{r}
+all_cores <- parallel::detectCores(logical = TRUE)
+cl <- makePSOCKcluster(all_cores)
+registerDoParallel(cl)
+```
+
+### Create workflow
+
+```{r}
+ames_wf <- workflow() %>%
+  add_model(ames_lm) %>% 
+  add_recipe(ames_rec)
+
+ames_wf
+```
+
+### Train and fit models
+
+```{r}
+ames_res <- ames_wf %>%
+  fit_resamples(
+    ames_folds,
+    metrics = metric_set(rsq),
+    control = control_resamples(save_pred = TRUE)
+  )
+
+glimpse(ames_res)
+
+collect_metrics(ames_res)
+
+set.seed(123)
+
+ames_final <- ames_wf %>%
+  last_fit(ames_split, 
+           metrics = metric_set(rsq),
+           control = control_last_fit(allow_par = TRUE))
+
+collect_metrics(ames_final)
+
+ames_final %>% collect_predictions()
+```
+
+```{r}
+ames_final %>% 
+  collect_predictions() %>% 
+  ggplot(aes(x = .pred, y = sale_price)) +
+  geom_point(color = '#006EA1', alpha = 0.25) +
+  geom_abline(intercept = 0, slope = 1, color = 'black', linewidth=0.5, linetype="dotted") +
+  labs(title = 'Linear Regression Results - Ames Test Set',
+       x = 'Predicted Selling Price',
+       y = 'Actual Selling Price')
+```
+
+## Classification Models
+
+```{r}
+#read in dataframe
+data(PimaIndiansDiabetes)
+diabetes_data <- PimaIndiansDiabetes
+```
+
+### EDA
+
+```{r}
+summary(diabetes_data)
+
+#check for missing data
+vis_miss(diabetes_data)
+
+d_na <- diabetes_data %>%
+  mutate(glucose = na_if(glucose, 0)) %>%
+  mutate(triceps = na_if(triceps, 0)) %>%
+  mutate(insulin = na_if(insulin, 0)) %>%
+  mutate(mass = na_if(mass, 0)) %>%
+  mutate(pressure = na_if(pressure, 0))
+
+vis_miss(d_na)
+```
+
+### Splitting the data into training and testing
+
+```{r}
+set.seed(123)
+
+diabetes_split <- d_na %>%
+    initial_split(prop = 0.7, 
+                  strata = "diabetes")
+
+d_na_train <- training(diabetes_split)
+d_na_test <- testing(diabetes_split)
+
+glimpse(d_na_train)
+glimpse(d_na_test)
+
+# #check stratification
+# dim(d_na_train)
+# dim(d_na_test)
+# 
+# together <- bind_rows(train = d_na_train,
+#                       test = d_na_test,
+#                       .id = "test_train" ) 
+# 
+# together %>%
+#   ggplot(aes(x = diabetes))+
+#   geom_bar()+
+#   facet_grid(test_train~., scales = "free")
+```
+
+```{r}
+set.seed(123)
+
+diabetes_folds <- vfold_cv(d_na_train, v = 10, repeats = 5)
+
+glimpse(diabetes_folds)
+```
+
+### Create recipe for data pre-processing
+
+```{r}
+set.seed(123)
+
+diabetes_rec <- recipe(diabetes ~ ., data = d_na_train) %>%
+                step_impute_median(all_numeric_predictors()) %>%
+                step_normalize(all_numeric_predictors()) 
+  
+diabetes_rec  
+```
+
+### Specify models and engines
+
+```{r}
+# random forest
+rf_model_diabetes <- 
+  rand_forest(mtry = tune(),
+              trees = tune(),
+              min_n = tune()) %>%
+  set_engine("ranger", importance = "impurity") %>% 
+  set_mode("classification") 
+
+# logistic regression
+rlr_model_diabetes <- 
+  logistic_reg(mixture = tune(), 
+               penalty = tune()) %>%
+  set_engine("glmnet") %>%
+  set_mode("classification")
+```
+
+### Set up grid for tuning
+
+```{r}
+rf_grid <- grid_random(mtry() %>% range_set(c(3, 6)),
+                       trees(),
+                       min_n(),
+                       size = 10)
+grid_ctrl <-
+  control_grid(
+    save_pred = TRUE,
+    parallel_over = "everything",
+    save_workflow = TRUE
+)
+
+all_cores <- parallel::detectCores(logical = TRUE)
+
+cl <- makePSOCKcluster(all_cores)
+registerDoParallel(cl)
+
+rf_tune_model <- tune_grid(
+  rf_model_diabetes, 
+  diabetes_rec,       
+  resamples = diabetes_folds,
+  grid = rf_grid,
+  control = grid_ctrl)
+
+rlr_grid <- data.frame(mixture = seq(0, 1, 0.1),
+                       penalty = seq(0, 1, 0.1))
+
+rlr_tune_model <- tune_grid(
+  rlr_model_diabetes,  
+  diabetes_rec,       
+  resamples = diabetes_folds, 
+  grid = rlr_grid,
+  control = grid_ctrl)
+```
+
+### Create workflow
+
+```{r}
+diabetes_wf_set <- workflow_set(list(diabetes_rec),  
+             list(rf_model_diabetes, rlr_model_diabetes), 
+             cross = TRUE) 
+
+diabetes_wf_set <- diabetes_wf_set %>%
+  option_add(grid=rf_grid, id="recipe_rand_forest") %>%
+  option_add(grid=rlr_grid, id="recipe_logistic_reg")
+```
+
+### Train and fit models
+
+```{r}
+diabetes_wf_set <- diabetes_wf_set %>%
+                   workflow_map("tune_grid",
+                   resamples = diabetes_folds,
+                   control = grid_ctrl,
+                   verbose = TRUE) 
+
+best_results <- diabetes_wf_set %>%
+  extract_workflow_set_result("recipe_logistic_reg") %>%
+  select_best(metric="roc_auc")
+
+final_diabetes_fit <- diabetes_wf_set %>%
+  extract_workflow("recipe_logistic_reg") %>%
+  finalize_workflow(best_results) %>%
+  last_fit(diabetes_split)
+```
+
+## Unsupervised Models
+
+```{r}
+
+```
+
+```{r}
+
+```
