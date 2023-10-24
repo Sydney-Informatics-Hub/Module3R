@@ -1,0 +1,580 @@
+---
+title: "Machine Learning in R"
+author: "Sydney Informatics Hub"
+output: html_document
+---
+
+# MLR
+
+This is the code for the MLR workshops condensed into one RMD file for your convenience.
+
+Some useful links: 
+
+* ELI5 background context for ML: https://vas3k.com/blog/machine_learning/
+* Tidymodels in R: https://workshops.tidymodels.org, https://www.tmwr.org, https://www.rebeccabarter.com/blog/2020-03-25_machine_learning
+* Classification models: https://www.kirenz.com/post/2021-02-17-r-classification-tidymodels/, 
+* Regression models: https://www.kirenz.com/post/2020-12-19-r-tidymodels-housing/
+* List of recipe steps and functions: https://www.tidymodels.org/find/recipes/
+* List of models and their engines, see: https://www.tidymodels.org/find/parsnip/
+* https://youtu.be/dMwHFhKWRRI?feature=shared
+* https://youtu.be/HVAFflj2PS0?feature=shared
+
+
+```{r setup environment, include=FALSE}
+# load packages
+library(AmesHousing)
+library(bestNormalize)
+library(doParallel)
+library(embed)
+library(emojifont)
+library(finetune)
+library(GGally)
+library(ggcorrplot)
+library(here)
+library(janitor)
+library(learnr)
+library(learntidymodels)
+library(naniar)
+library(parallel)
+library(plotly)
+library(skimr)
+library(sortable)
+library(randomForest)
+library(tidymodels)
+library(tidytext)
+library(tidyverse)
+library(vip)
+theme_set(theme_minimal())
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+```
+
+## Regression Models
+
+Substitute with your own input data, make sure it is cleaned and formatted appropriately (ideally as a csv):
+
+* Each variable must have its own column;
+* Each observation must have its own row;
+* Each value must have its own cell.
+
+```{r read in dataframe for regression model}
+ameshousing <- AmesHousing::make_ames() %>% 
+  janitor::clean_names()
+```
+
+### EDA
+
+```{r EDA}
+skim(ameshousing) #What can you figure out about the different variables? Which do you think are more or less important?
+
+#distribution of selling price
+ameshousing %>% 
+  ggplot(aes(x = sale_price)) + 
+  geom_histogram(bins = 50) + 
+  labs(x = "Sale Price",
+       y = "Number of Houses sold")
+
+# #check distribution of normalized selling price
+# ames_recipe <- recipe(sale_price ~ ., data = ameshousing) %>%
+#   step_best_normalize(sale_price)
+# 
+# ames_recipe 
+# 
+# ames_recipe %>% prep() %>% tidy(number = 1)
+# 
+# ames_recipe %>%
+#   prep() %>%
+#   juice() %>%
+#   ggplot(aes(x = sale_price)) + 
+#   geom_histogram(bins = 50) + 
+#   labs(x = "Sale Price",
+#        y = "Number of Houses sold")
+
+#analyse correlated variables
+numVars <- ameshousing %>% 
+  select_if(is.numeric) %>%
+  names()
+
+ameshousingCor <- cor(ameshousing[,numVars],
+                      use = "pairwise.complete.obs")
+
+ameshousingCor_pvalues <- cor_pmat(ameshousingCor)
+
+ggcorrplot(ameshousingCor,
+           type = "lower", 
+           p.mat = ameshousingCor_pvalues)
+
+# #check relationship with the most co-correlated variables
+# ameshousing %>%
+#   ggplot(aes(x = gr_liv_area, y = sale_price/1000)) + 
+#   geom_point(alpha = 0.1) + 
+#   labs(y = "Sale Price/$1000",
+#        x = "Living Area (sq.ft)",
+#        title = "Ames Housing Data") +
+#   geom_smooth(method= "lm")
+```
+
+### Splitting the data
+
+```{r}
+set.seed(123)
+
+ames_split <- ameshousing %>%
+    initial_split(prop = 0.8, #80/20, 70/30 or 60/40 split depending on your dataset
+                  strata = sale_price) #replace with your outcome variable
+
+ames_train <- training(ames_split)
+ames_test <- testing(ames_split)
+
+glimpse(ames_train)
+glimpse(ames_test)
+
+ames_folds <- vfold_cv(ames_train, v = 10, repeats = 5) #resampling for cross-validation
+
+glimpse(ames_folds)
+```
+
+### Create recipe
+
+```{r}
+ames_rec <-
+  recipe(sale_price ~ ., data = ames_train) %>%
+  step_best_normalize(sale_price) %>% #EDA on outcome variable shows that it needs to be normalized 
+  step_filter(gr_liv_area <= 4000) %>%
+  step_mutate(time_since_remodel = year_sold - year_remod_add, 
+         house_age = year_sold - year_built) %>%
+  step_select(-year_remod_add, -year_built) %>%
+  step_nzv(all_predictors()) %>% #remove predictors that are highly sparse and unbalanced
+  step_normalize(all_numeric_predictors()) %>% #normalize the data to a standard range by dividing each observation by the standard deviation of the feature
+  step_dummy(all_nominal_predictors(), one_hot = FALSE) #create numeric representations of categorical data
+
+ames_rec
+```
+
+### Specify models and engines
+
+```{r}
+ames_lm <- linear_reg() %>% 
+  set_engine("lm")
+```
+
+### Set up grid for tuning
+
+```{r}
+all_cores <- parallel::detectCores(logical = TRUE)
+cl <- makePSOCKcluster(all_cores)
+registerDoParallel(cl)
+```
+
+### Create workflow
+
+```{r}
+ames_wf <- workflow() %>%
+  add_model(ames_lm) %>% 
+  add_recipe(ames_rec)
+
+ames_wf
+```
+
+### Train and fit models
+
+```{r}
+ames_res <- ames_wf %>%
+  fit_resamples(
+    ames_folds,
+    metrics = metric_set(rsq),
+    control = control_resamples(save_pred = TRUE)
+  )
+
+glimpse(ames_res)
+
+collect_metrics(ames_res)
+```
+
+```{r}
+set.seed(123)
+
+ames_final <- ames_wf %>%
+  last_fit(ames_split, 
+           metrics = metric_set(rsq),
+           control = control_last_fit(allow_par = TRUE))
+
+collect_metrics(ames_final)
+
+ames_final %>% collect_predictions()
+```
+
+```{r}
+ames_final %>% 
+  collect_predictions() %>% 
+  ggplot(aes(x = .pred, y = sale_price)) +
+  geom_point(color = '#006EA1', alpha = 0.25) +
+  geom_abline(intercept = 0, slope = 1, color = 'black', linewidth=0.5, linetype="dotted") +
+  labs(title = 'Linear Regression Results - Ames Test Set',
+       x = 'Predicted Selling Price',
+       y = 'Actual Selling Price')
+```
+
+## Classification Models
+
+```{r}
+#read in dataframe
+data(PimaIndiansDiabetes)
+diabetes_data <- PimaIndiansDiabetes
+```
+
+### EDA
+
+```{r}
+summary(diabetes_data)
+
+#check for missing data
+vis_miss(diabetes_data)
+
+d_na <- diabetes_data %>%
+  mutate(glucose = na_if(glucose, 0)) %>%
+  mutate(triceps = na_if(triceps, 0)) %>%
+  mutate(insulin = na_if(insulin, 0)) %>%
+  mutate(mass = na_if(mass, 0)) %>%
+  mutate(pressure = na_if(pressure, 0))
+
+vis_miss(d_na)
+```
+
+### Splitting the data
+
+```{r}
+set.seed(123)
+
+diabetes_split <- d_na %>%
+    initial_split(prop = 0.7, 
+                  strata = "diabetes")
+
+d_na_train <- training(diabetes_split)
+d_na_test <- testing(diabetes_split)
+
+glimpse(d_na_train)
+glimpse(d_na_test)
+
+# #check stratification
+# dim(d_na_train)
+# dim(d_na_test)
+# 
+# together <- bind_rows(train = d_na_train,
+#                       test = d_na_test,
+#                       .id = "test_train" ) 
+# 
+# together %>%
+#   ggplot(aes(x = diabetes))+
+#   geom_bar()+
+#   facet_grid(test_train~., scales = "free")
+
+diabetes_folds <- vfold_cv(d_na_train, v = 10, repeats = 5)
+
+glimpse(diabetes_folds)
+```
+
+### Create recipe
+
+```{r}
+set.seed(123)
+
+diabetes_rec <- recipe(diabetes ~ ., data = d_na_train) %>%
+                step_impute_median(all_numeric_predictors()) %>%
+                step_normalize(all_numeric_predictors()) 
+  
+diabetes_rec  
+```
+
+### Specify models and engines
+
+```{r}
+# random forest
+rf_model_diabetes <- 
+  rand_forest(mtry = tune(),
+              trees = tune(),
+              min_n = tune()) %>%
+  set_engine("ranger", importance = "impurity") %>% 
+  set_mode("classification") 
+
+# logistic regression
+rlr_model_diabetes <- 
+  logistic_reg(mixture = tune(), 
+               penalty = tune()) %>%
+  set_engine("glmnet") %>%
+  set_mode("classification")
+```
+
+### Set up grid for tuning
+
+```{r}
+set.seed(123)
+
+#specify grid
+rf_grid <- grid_random(mtry() %>% range_set(c(3, 6)),
+                       trees(),
+                       min_n(),
+                       size = 10)
+
+rf_grid
+
+# #can also do custom grid values
+# rlr_grid <- data.frame(mixture = seq(0, 1, 0.1),
+#                        penalty = seq(0, 1, 0.1))
+# rlr_grid
+
+#Tune random forest model 
+rf_tune_model <- tune_grid(
+  rf_model_diabetes, 
+  diabetes_rec,       
+  resamples = diabetes_folds,
+  grid = rf_grid, #can replace with custom grid
+  control = grid_ctrl)
+
+rf_tune_model
+
+#collect best tuning results
+rf_tune_model %>%
+  collect_metrics()
+
+rf_tune_model %>%
+  show_best("roc_auc")
+```
+
+### Create workflow set
+
+```{r}
+diabetes_wf_set <- workflow_set(list(diabetes_rec),  
+             list(rf_model_diabetes, rlr_model_diabetes), 
+             cross = TRUE) 
+
+#add grids
+diabetes_wf_set <- diabetes_wf_set %>%
+  option_add(grid=rf_grid, id="recipe_rand_forest") %>% #add the rf_grid
+  option_add(grid=rlr_grid, id="recipe_logistic_reg") #add the rlr_grid
+
+diabetes_wf_set$option
+```
+
+### Train and fit models
+
+```{r}
+diabetes_wf_set <- diabetes_wf_set %>%
+                   workflow_map("tune_grid",
+                   resamples = diabetes_folds,
+                   control = grid_ctrl,
+                   verbose = TRUE) 
+
+diabetes_wf_set
+
+rank_results(diabetes_wf_set, rank_metric = "roc_auc")
+autoplot(diabetes_wf_set, metric = "roc_auc")
+```
+
+```{r}
+best_results <- diabetes_wf_set %>%
+  extract_workflow_set_result("recipe_logistic_reg") %>%
+  select_best(metric="roc_auc")
+
+best_results
+```
+
+```{r}
+set.seed(123)
+
+final_diabetes_fit <- diabetes_wf_set %>%
+  extract_workflow("recipe_logistic_reg") %>%
+  finalize_workflow(best_results) %>%
+  last_fit(diabetes_split)
+
+final_diabetes_fit
+
+final_diabetes_fit %>% collect_metrics()
+```
+
+```{r}
+collect_predictions(final_diabetes_fit) %>%
+  roc_curve(diabetes, event_level="second", .pred_pos) %>%
+                autoplot()
+
+conf_matrix_rf <- final_diabetes_fit %>%
+  collect_predictions() %>%
+  conf_mat(truth = diabetes, estimate = .pred_class) 
+
+conf_matrix_rf
+
+conf_matrix_rf %>%
+  autoplot()
+```
+
+```{r}
+final_workflow <- diabetes_wf_set %>%
+  extract_workflow("recipe_logistic_reg") %>%
+  finalize_workflow(best_results)
+
+wf_fit <- final_workflow %>%
+  fit(data = d_na_train)
+
+wf_fit <- wf_fit %>% 
+          pull_workflow_fit()
+
+vip(wf_fit)
+```
+
+## Unsupervised Models
+
+```{r}
+zoo_names <- c("animal_name", "hair", "feathers", "eggs", "milk", "airborne", "aquatic", "predator", "toothed", "backbone", "breathes", "venomous", "fins", "legs", "tail", "domestic", "catsize", "class")
+
+anim_types <- tribble(~class, ~type,
+                      1, "mammal",
+                      2, "bird",
+                      3, "reptile",
+                      4, "fish",
+                      5, "amphibian",
+                      6, "insect",
+                      7, "other_arthropods")
+zoo <- 
+  read_csv("http://archive.ics.uci.edu/ml/machine-learning-databases/zoo/zoo.data", 
+           col_names = zoo_names) %>%
+  left_join(anim_types) %>%
+  select(-class) %>%
+  rename(animal_type=type) 
+  
+zoo$animal_name <- as.factor(zoo$animal_name)
+zoo$animal_type <- as.factor(zoo$animal_type)
+```
+
+### EDA
+
+```{r}
+glimpse(zoo)
+
+zoo %>% count(animal_type)
+
+zoo %>% ggplot(aes(animal_type)) +
+  geom_bar(fill="#CA225E") +
+  theme_minimal()
+
+zoo %>% mutate(eggs = recode(eggs, `0`="doesn't lay eggs", `1`="lays Eggs" )) %>%
+  ggplot(aes(animal_type, fill=eggs)) +
+  geom_bar() +
+  scale_fill_manual(values = c("#372F60", "#CA225E")) + 
+  theme_minimal() +
+  theme(legend.position = "top")
+
+zoo %>% count(animal_type, eggs)
+
+zoo %>% filter(animal_type == "mammal",
+         eggs == 1) %>%
+  select(animal_name, animal_type, eggs) 
+
+#correlated variables
+numVars <- zoo %>% 
+  select_if(is.numeric) %>%
+  names()
+
+zooCor <- cor(zoo[,numVars], use = "pairwise.complete.obs")
+
+zooCor_pvalues <- cor_pmat(zooCor)
+
+ggcorrplot(zooCor,
+           type = "lower", 
+           p.mat = zooCor_pvalues)
+```
+
+### Splitting the data 
+
+```{r}
+set.seed(123)
+
+zoo_split <- zoo %>%
+    initial_split(prop = 0.8)
+
+zoo_train <- training(zoo_split)
+zoo_test <- testing(zoo_split)
+
+glimpse(zoo_train)
+glimpse(zoo_test)
+
+zoo_folds <- vfold_cv(zoo_train, v = 10, repeats = 5)
+```
+
+### Create recipe
+
+```{r}
+#your basic recipe
+base_rec <- recipe(animal_type ~ ., data = zoo_train) %>% 
+  step_normalize(all_numeric_predictors()) %>%
+  step_dummy(all_nominal_predictors(), one_hot = FALSE) 
+
+#your pca recipe
+rec_pca <- recipe(animal_type ~ ., data = zoo_train) %>% 
+  step_normalize(all_numeric_predictors()) %>%
+  step_dummy(all_nominal_predictors(), one_hot = FALSE) %>%
+  step_pca(all_numeric_predictors(), num_comp = tune())
+```
+
+### Specify models and engines
+
+```{r}
+# multinomial model
+multi_model_zoo <- multinom_reg(
+  mode = "classification",
+  engine = "glmnet",
+  penalty = tune(),
+  mixture = tune()
+)
+
+# random forest
+rf_spec <- rand_forest(trees = 1000) %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
+```
+
+### Create workflow 
+
+```{r}
+set.seed(123)
+
+zoo_wf_set <- workflow_set(list(basic = base_rec, pca = rec_pca),  
+             list(multi = multi_model_zoo, rf = rf_spec), 
+             cross = TRUE) 
+```
+
+### Train and fit models
+
+```{r}
+zoo_wf_set_tuning <- zoo_wf_set %>%
+                   workflow_map("tune_grid",
+                   resamples = zoo_folds,
+                   control = grid_ctrl, 
+                   grid = 10, 
+                   metrics = metric_set(roc_auc),
+                   verbose = TRUE)
+
+rankings <- rank_results(zoo_wf_set_tuning, select_best = TRUE) %>% 
+  mutate(method = map_chr(wflow_id, ~ str_split(.x, "_", simplify = TRUE)[1])) 
+
+tidymodels_prefer()
+filter(rankings, rank <= 5) %>% dplyr::select(rank, mean, model, method)
+
+rankings %>% ggplot(aes(x = rank, y = mean, pch = method, color = model)) + 
+  geom_point(cex = 3.5) + 
+  theme(legend.position = "right") +
+  labs(y = "ROC AUC")  +
+  geom_text(aes(y = mean - 0.01, label = wflow_id), angle = 90, hjust = 1) +
+  lims(y = c(0.9, NA))
+
+zoo_res <- zoo_wf_set_tuning %>% 
+  extract_workflow("basic_multi") %>% 
+  finalize_workflow(
+    zoo_wf_set_tuning %>% 
+      extract_workflow_set_result("basic_multi") %>% 
+      select_best(metric = "roc_auc")) %>% 
+  last_fit(split = zoo_split, 
+           metrics = metric_set(roc_auc),
+           control = control_last_fit(allow_par = TRUE))
+
+collect_metrics(zoo_res)
+```
