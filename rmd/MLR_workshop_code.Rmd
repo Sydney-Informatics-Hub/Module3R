@@ -4,19 +4,18 @@ author: "Sydney Informatics Hub"
 output: html_document
 ---
 
-## MLR
+# MLR
 
 This is the code for the MLR workshops condensed into one RMD file for your convenience.
 
 Some useful links: 
 
 * ELI5 background context for ML: https://vas3k.com/blog/machine_learning/
-* Tidymodels in R: https://workshops.tidymodels.org, https://www.tmwr.org, https://www.rebeccabarter.com/blog/2020-03-25_machine_learning, 
+* Tidymodels in R: https://workshops.tidymodels.org, https://www.tmwr.org, https://www.rebeccabarter.com/blog/2020-03-25_machine_learning
+* Classification models: https://www.kirenz.com/post/2021-02-17-r-classification-tidymodels/, 
+* Regression models: https://www.kirenz.com/post/2020-12-19-r-tidymodels-housing/
 * List of recipe steps and functions: https://www.tidymodels.org/find/recipes/
 * List of models and their engines, see: https://www.tidymodels.org/find/parsnip/
-* TBA
-* TBA
-* TBA
 * https://youtu.be/dMwHFhKWRRI?feature=shared
 * https://youtu.be/HVAFflj2PS0?feature=shared
 
@@ -451,27 +450,22 @@ zoo$animal_type <- as.factor(zoo$animal_type)
 ```{r}
 glimpse(zoo)
 
-zoo %>% 
-  count(animal_type)
+zoo %>% count(animal_type)
 
-zoo %>%
-  ggplot(aes(animal_type)) +
+zoo %>% ggplot(aes(animal_type)) +
   geom_bar(fill="#CA225E") +
   theme_minimal()
 
-zoo %>%
-  mutate(eggs = recode(eggs, `0`="doesn't lay eggs", `1`="lays Eggs" )) %>%
+zoo %>% mutate(eggs = recode(eggs, `0`="doesn't lay eggs", `1`="lays Eggs" )) %>%
   ggplot(aes(animal_type, fill=eggs)) +
   geom_bar() +
   scale_fill_manual(values = c("#372F60", "#CA225E")) + 
   theme_minimal() +
   theme(legend.position = "top")
 
-zoo %>% 
-  count(animal_type, eggs)
+zoo %>% count(animal_type, eggs)
 
-zoo %>%
-  filter(animal_type == "mammal",
+zoo %>% filter(animal_type == "mammal",
          eggs == 1) %>%
   select(animal_name, animal_type, eggs) 
 
@@ -565,22 +559,19 @@ rankings <- rank_results(zoo_wf_set_tuning, select_best = TRUE) %>%
 tidymodels_prefer()
 filter(rankings, rank <= 5) %>% dplyr::select(rank, mean, model, method)
 
-rankings %>% 
-  ggplot(aes(x = rank, y = mean, pch = method, color = model)) + 
+rankings %>% ggplot(aes(x = rank, y = mean, pch = method, color = model)) + 
   geom_point(cex = 3.5) + 
   theme(legend.position = "right") +
   labs(y = "ROC AUC")  +
   geom_text(aes(y = mean - 0.01, label = wflow_id), angle = 90, hjust = 1) +
   lims(y = c(0.9, NA))
 
-zoo_res <- 
-  zoo_wf_set_tuning %>% 
+zoo_res <- zoo_wf_set_tuning %>% 
   extract_workflow("basic_multi") %>% 
   finalize_workflow(
     zoo_wf_set_tuning %>% 
       extract_workflow_set_result("basic_multi") %>% 
-      select_best(metric = "roc_auc") 
-  ) %>% 
+      select_best(metric = "roc_auc")) %>% 
   last_fit(split = zoo_split, 
            metrics = metric_set(roc_auc),
            control = control_last_fit(allow_par = TRUE))
