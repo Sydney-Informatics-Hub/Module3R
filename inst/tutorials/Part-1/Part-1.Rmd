@@ -1,11 +1,14 @@
 ---
-title: "Getting Started with Machine Learning in R - Part 1"
+title: "Getting Started with Machine Learning in R - Regression"
+author: "Sydney Informatics Hub (SIH)"
 output: 
   learnr::tutorial:
     progressive: true
     allow_skip: false
     theme: "readable"
 runtime: shiny_prerendered
+description: >
+  In this tutorial, you will gain experience in exploratory data analysis, preparing data so it is ready for predictive modeling, training supervised (REGRESSION) machine learning models using tidymodels, and evaluating those models.
 ---
 
 ```{r setup, include=FALSE}
@@ -95,14 +98,15 @@ To follow this tutorial, you don't need to already have familiarity with tidymod
 
 ## Exploratory Data Analysis (EDA)
 
-Hello! Today we learn about Exploratory Data Analysis in R using tidyverse functions.
+Today we learn about Exploratory Data Analysis (EDA) in R using tidyverse functions.
 
 Exploratory data analysis involves looking at:
 
 -   The distribution of variables in your dataset;
 -   Whether any data is missing;
 -   Data skewness;
--   Correlated variables.
+-   Correlated variables...
+-   and much more! 
 
 ### Choose an appropriate model
 
@@ -133,11 +137,8 @@ Start off this case study by examining your data set and visualizing the distrib
 -   Which do you think are more or less important?
 
 ```{r skim, exercise=TRUE, exercise.lines = 2}
-____(ameshousing)
-```
-
-```{r skim-solution}
-skim(ameshousing)
+ameshousing %>%
+  ____
 ```
 
 **Checklist for predictors:**
@@ -156,7 +157,7 @@ You need to do EDA on the outcome variable to:
 
 This is because many models, including ordinary linear regression, assume that prediction errors (and hence the response) are normally distributed.
 
-**Instructions** Use the appropriate column from the data set in the call to `aes()` so you can plot a histogram of the selling price. Set the correct x and y labels. The ggplot2 package, with functions like `ggplot()` and `geom_histogram()`, is included in the tidyverse.
+**Instructions** Use the appropriate column from the data set in the call to `aes()` so you can plot a histogram of the selling price. Set the correct `x` and `y` labels. The *ggplot2* package, with functions like `ggplot()` and `geom_histogram()`, is included in the tidyverse.
 
 ```{r selling-price, exercise=TRUE, exercise.blanks = "___+"}
 ameshousing %>% 
@@ -166,21 +167,13 @@ ameshousing %>%
        ____ = "Number of Houses sold")
 ```
 
-```{r selling-price-solution}
-ameshousing %>% 
-  ggplot(aes(x = sale_price)) + 
-  geom_histogram(bins = 50) + 
-  labs(x = "Sale Price",
-       y = "Number of Houses sold")
-```
-
 *Normalization* is an example of a preprocessing step for modeling. The **bestNormalize** library can be used to identify the best normalising transformation. We can normalise the outcome variable as this both helps the distribution look more normal and helps keep our error metrics and final predictions easily interpretable. It also means that the errors of predicting the values of inexpensive and expensive houses will affect the prediction equally.
 
 We will normalize the outcome variable using the **recipes** package, an extensible framework for pipeable sequences of feature engineering steps that provide preprocessing tools to be applied to data. The resulting processed output can be used as inputs for statistical or machine learning models.
 
 **Instructions** Use the `recipe()` function to apply the following preprocessing steps:
 
--   use the **bestNormalize** package to transform the outcome variable (sale_price);
+-   use the `step_best_normalize()` function to transform the outcome variable (`sale_price`);
 
 *The recipe shown below only has one preprocessing step (normalizing, that comes from an extra add-on package called bestNormalize), but you can implement many steps on one dataset during preprocessing*
 
@@ -197,23 +190,6 @@ ames_recipe %>%
   juice() %>%
   ggplot(aes(x = sale_price)) + 
   geom_histogram(bins = 50) + #for each bin, the number of data points that fall into it are counted (frequency)
-  labs(x = "Sale Price",
-       y = "Number of Houses sold")
-```
-
-```{r bestNormalize-solution}
-ames_recipe <- recipe(sale_price ~ ., data = ameshousing) %>%
-  step_best_normalize(sale_price)
-
-ames_recipe 
-
-ames_recipe %>% prep() %>% tidy(number = 1)
-
-ames_recipe %>%
-  prep() %>%
-  juice() %>%
-  ggplot(aes(x = sale_price)) + 
-  geom_histogram(bins = 50) + 
   labs(x = "Sale Price",
        y = "Number of Houses sold")
 ```
@@ -238,29 +214,14 @@ numVars <- ameshousing %>%
   select_if(is.numeric) %>%
   names()
 
-ameshousingCor <- cor(ameshousing[,____],
+ameshousingCor <- ____(ameshousing[,numVars],
                       use = "pairwise.complete.obs")
 
 ameshousingCor_pvalues <- cor_pmat(____)
 
-ggcorrplot(____,
+____(ameshousingCor,
            type = "lower", 
-           p.mat = ____)
-```
-
-```{r correlation-solution}
-numVars <- ameshousing %>% 
-  select_if(is.numeric) %>%
-  names()
-
-ameshousingCor <- cor(ameshousing[,numVars],
-                      use = "pairwise.complete.obs")
-
-ameshousingCor_pvalues <- cor_pmat(ameshousingCor)
-
-ggcorrplot(ameshousingCor,
-           type = "lower", 
-           p.mat = ameshousingCor_pvalues)
+           p.mat = ____) #add pvalues of the correlation
 ```
 
 We can notice that `gr_liv_area` is the most correlated with `sale_price`, let's plot this relationship using the `ggplot()` function:
@@ -271,16 +232,6 @@ ameshousing %>%
   geom_point(alpha = 0.1) + 
   labs(____ = "Sale Price/$1000",
        ____ = "Living Area (sq.ft)",
-       title = "Ames Housing Data") +
-  geom_smooth(method= "lm")
-```
-
-```{r corr-plot-solution}
-ameshousing %>%
-  ggplot(aes(x = gr_liv_area, y = sale_price/1000)) + 
-  geom_point(alpha = 0.1) + 
-  labs(y = "Sale Price/$1000",
-       x = "Living Area (sq.ft)",
        title = "Ames Housing Data") +
   geom_smooth(method= "lm")
 ```
@@ -305,28 +256,17 @@ Creating training/testing splits reduces overfitting. When you evaluate your mod
 set.seed(123) #so we all get the same results
 
 ames_split <- ameshousing %>%
-    initial_split(prop = ____, 
-                  strata = ___)
+    ____(prop = 0.8,
+         strata = ___)
 
 ames_train <- training(___)
 ames_test <- testing(___)
 
-glimpse(ames_train)
-glimpse(ames_test)
-```
+ames_train %>%
+  glimpse()
 
-```{r test-train-solution}
-set.seed(123)
-
-ames_split <- ameshousing %>%
-    initial_split(prop = 0.8, 
-                  strata = sale_price)
-
-ames_train <- training(ames_split)
-ames_test <- testing(ames_split)
-
-glimpse(ames_train)
-glimpse(ames_test)
+ames_test %>%
+  glimpse()
 ```
 
 The code above takes an input data set and puts 80% of it into a training dataset and 20% of it into a testing dataset; it chooses the individual cases so that both sets are balanced in selling price.
@@ -347,7 +287,7 @@ Some other preprocessing steps can include:
 
 **Instructions** Use the `recipe()` function to apply the following preprocessing steps:
 
--   filter out outliers (houses with a gr_liv_area \> 4000 square feet) using `step_filter()`;
+-   filter out outliers (houses with a `gr_liv_area` \> 4000 square feet) using `step_filter()`;
 -   create new variables called *"time_since_remodel"* and *"house_age"* using `step_mutate()`:
 
 ```{r preprocessing, exercise=TRUE, exercise.blanks = "___+"}
@@ -366,21 +306,6 @@ ames_rec
 ames_rec
 ```
 
-```{r preprocessing-solution}
-ames_rec <-
-  recipe(sale_price ~ ., data = ames_train) %>% 
-  step_best_normalize(sale_price) %>%
-  step_filter(gr_liv_area <= 4000) %>%
-  step_mutate(time_since_remodel = year_sold - year_remod_add, 
-         house_age = year_sold - year_built) %>%
-  step_select(-year_remod_add, -year_built) %>%
-  step_nzv(all_predictors()) %>% 
-  step_normalize(all_numeric_predictors()) %>% 
-  step_dummy(all_nominal_predictors(), one_hot = FALSE) 
-  
-ames_rec
-```
-
 ### Build a model specification and create a modeling workflow
 
 In tidymodels, you specify models using using the **parsnip** package and three concepts:
@@ -393,19 +318,14 @@ In tidymodels, you specify models using using the **parsnip** package and three 
 
 ```{r model-build, exercise=TRUE, exercise.blanks = "___+"}
 #Linear regression
-ames_lm <- ____ %>% 
-  set_engine("lm")
+ames_lm <- ____ %>% #set type
+  set_engine("lm") #set engine
 #set_mode("regression") we don't need this as the model linear_reg() only does regression
-```
-
-```{r model-build-solution}
-ames_lm <- linear_reg() %>% 
-  set_engine("lm")         
 ```
 
 The **workflow** package was designed to capture the entire modeling process and combine *models* and *recipes* into a single object.
 
-**Instructions** Create a workflow, start with `workflow()` to create an empty workflow and then add out model (`ames_lm`) and recipe (`ames_rec`) with `add_model()` and `add_recipe()`:
+**Instructions** Create a workflow: start with `workflow()` to create an empty workflow and then add out model (`ames_lm`) and recipe (`ames_rec`) with `add_model()` and `add_recipe()` functions:
 
 ```{r wf, exercise=TRUE, exercise.blanks = "___+"}
 
@@ -413,14 +333,6 @@ The **workflow** package was designed to capture the entire modeling process and
 ames_wf <- workflow() %>%
   ____(ames_lm) %>% 
   ____(ames_rec)
-
-ames_wf
-```
-
-```{r wf-solution}
-ames_wf <- workflow() %>%
-  add_model(ames_lm) %>% 
-  add_recipe(ames_rec)
 
 ames_wf
 ```
@@ -456,15 +368,8 @@ set.seed(123)
 
 ames_folds <- vfold_cv(ames_train, ___ = 10, ___ = 5)
 
-glimpse(ames_folds)
-```
-
-```{r folds-solution}
-set.seed(123)
-
-ames_folds <- vfold_cv(ames_train, v = 10, repeats = 5)
-
-glimpse(ames_folds)
+ames_folds %>%
+  glimpse()
 ```
 
 Excellent job! You preprocessed this data, built a modeling workflow, and created cross-validation folds to evaluate model performance. 😎 Now it's time to put this all together and evaluate this model's performance.
@@ -488,20 +393,8 @@ ames_res <- ames_wf %>%
     control = control_resamples(save_pred = TRUE)
   )
 
-glimpse(ames_res)
-```
-
-```{r train-solution}
-set.seed(123)
-
-ames_res <- ames_wf %>%
-  fit_resamples(
-    ames_folds,
-    metrics = metric_set(rsq),
-    control = control_resamples(save_pred = TRUE)
-  )
-
-glimpse(ames_res)
+ames_res %>%
+  glimpse()
 ```
 
 The column `.metric` contains the performance statistics created from the 10 assessment sets. These can be manually unnested but the **tune** package contains a number of simple functions that can extract these data:
@@ -509,11 +402,8 @@ The column `.metric` contains the performance statistics created from the 10 ass
 **Instructions** Use the function `collect_metrics()` to obtain the metrics we specified from the resampling results:
 
 ```{r metrics, exercise=TRUE, exercise.blanks = "___+"}
-____(ames_res)
-```
-
-```{r metrics-solution}
-collect_metrics(ames_res)
+ames_res %>%
+  ____
 ```
 
 We can see that the regression relationship is very strong: \~90% of the variability in the selling price can be explained by the predictors.
@@ -541,18 +431,8 @@ ames_final <- ames_wf %>%
            control = control_last_fit(allow_par = TRUE))
 
 # Obtain performance metrics on test data
-____(ames_final)
-```
-
-```{r test-solution}
-set.seed(123)
-
-ames_final <- ames_wf %>%
-  last_fit(ames_split, 
-           metrics = metric_set(rsq),
-           control = control_last_fit(allow_par = TRUE))
-
-collect_metrics(ames_final)
+ames_final %>%
+  ____
 ```
 
 The rsq metric is similar for both the training and testing datasets in our linear regression model. This is a good sign that the model is not over-fitting and can be used for making predictions on new data.
@@ -562,10 +442,6 @@ The rsq metric is similar for both the training and testing datasets in our line
 ```{r final, exercise=TRUE, exercise.blanks = "___+"}
 # Obtain test set predictions data frame
 ames_final %>% ____
-```
-
-```{r final-solution}
-ames_final %>% collect_predictions()
 ```
 
 Wonderful! Sit back and run the given code to visualize the results!
