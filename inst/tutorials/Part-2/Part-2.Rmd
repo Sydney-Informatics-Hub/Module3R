@@ -6,6 +6,8 @@ output:
     allow_skip: false
     theme: "readable"
 runtime: shiny_prerendered
+description: >
+  In this tutorial, you will gain experience in exploratory data analysis, preparing data so it is ready for predictive modeling, training supervised (CLASSIFICATION) machine learning models using tidymodels, and evaluating those models.
 ---
 
 ```{r setup, include=FALSE}

@@ -9,6 +9,8 @@ runtime: shiny_prerendered
 editor_options: 
   markdown: 
     wrap: sentence
+description: >
+  In this tutorial, you will gain experience in exploratory data analysis, preparing data so it is ready for predictive modeling, training unsupervised (PCA) machine learning models using tidymodels, and evaluating those models.
 ---
 
 ```{r setup, include=FALSE}
@@ -19,12 +21,12 @@ library(embed)
 library(tidytext)
 library(sortable)
 library(ggcorrplot)
-library(embed)
-library(sortable)
-library(learntidymodels)
 library(doParallel)
 library(emojifont)
 library(finetune)
+library(tune)
+library(glmnet)
+library(ranger)
 theme_set(theme_minimal())
 
 knitr::opts_chunk$set(echo = FALSE)
@@ -142,7 +144,7 @@ zoo_res <-
   finalize_workflow(
     zoo_wf_set_tuning %>% 
       extract_workflow_set_result("basic_multi") %>% 
-      select_best(metric = "roc_auc") 
+      tune::select_best(metric = "roc_auc") 
   ) %>% 
   last_fit(split = zoo_split, 
            metrics = metric_set(roc_auc),
