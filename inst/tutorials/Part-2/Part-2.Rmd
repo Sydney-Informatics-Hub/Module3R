@@ -1,5 +1,5 @@
 ---
-title: "Getting Started with Machine Learning in R - Part 2"
+title: "Getting Started with Machine Learning in R - Classification"
 output: 
   learnr::tutorial:
     progressive: true
@@ -8,6 +8,9 @@ output:
 runtime: shiny_prerendered
 description: >
   In this tutorial, you will gain experience in exploratory data analysis, preparing data so it is ready for predictive modeling, training supervised (CLASSIFICATION) machine learning models using tidymodels, and evaluating those models.
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r setup, include=FALSE}
@@ -131,7 +134,7 @@ final_diabetes_fit <- diabetes_wf_set %>%
 
 Hello!
 
-Today, we are going to be working with [Pima Indian Women's diabetes
+Today, we are working with the [Pima Indian Women's diabetes
 dataset](https://en.wikipedia.org/wiki/Akimel_O%27odham) which contains
 information on 768 Pima Indian women's diabetes status, as well as many
 predictive features:
@@ -204,18 +207,15 @@ missing values.
 **Instructions** Use the `summary()` function from the *skimr* package
 for an initial exploration of the Pima Indians dataset `diabetes_data`.
 
-```{r summary, exercise=TRUE, exercise.lines = 2}
-____(diabetes_data)
-```
-
-```{r summary-solution}
-summary(diabetes_data)
+```{r summary, exercise=TRUE, error=TRUE, exercise.lines = 2}
+diabetes_data %>%
+  ____
 ```
 
 Within this dataset, it is clear that the values of several variables
 are zero when it is impossible for them to be so (i.e. this value could
-not be zero if it was measured). Hence, we are dealing with "hidden"
-missing data.
+not be zero if it was measured). Hence, we are dealing with *"hidden"
+missing data*.
 
 ```{r missingness_A}
 question(
@@ -250,7 +250,7 @@ recoded as `NA` and visualise it.
 
 **Instructions**
 
--   Use the `vis_dat()` function to visualise the missing values of the
+-   Use the `vis_miss()` function to visualise the missing values of the
     `diabetes_data` object;
 -   Use the `mutate()` function from the **dplyr** package to create a
     new dataframe called `d_na` and recode all the 0 values of the
@@ -272,19 +272,6 @@ d_na <- diabetes_data %>%
 ____(d_na)
 ```
 
-```{r vis-solution}
-vis_miss(diabetes_data)
-
-d_na <- diabetes_data %>%
-  mutate(glucose = na_if(glucose, 0)) %>%
-  mutate(triceps = na_if(triceps, 0)) %>%
-  mutate(insulin = na_if(insulin, 0)) %>%
-  mutate(mass = na_if(mass, 0)) %>%
-  mutate(pressure = na_if(pressure, 0))
-
-vis_miss(d_na)
-```
-
 ## Our data budget and preprocessing steps
 
 ### Training and testing data
@@ -303,12 +290,12 @@ of how it will perform on new data.
 -   Use the `initial_split()` function to create a data split that
     divides the original data into 70%/30% sections and (roughly)
     divides the data into subsets based on the target/outcome variable's
-    distribution;
+    distribution (`diabetes`);
 -   Use the functions `training()` and `testing()` to assign the 70%
     partition to `d_na_train` and the 30% partition to `d_na_test`,
     respectively.
 
-```{r test-train, exercise=TRUE, exercise.blanks = "___+"}
+```{r test-train, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 # Split the data into training and test sets
 set.seed(123) #so we all get the same results
 
@@ -318,20 +305,6 @@ diabetes_split <- d_na %>%
 
 d_na_train <- training(___)
 d_na_test <- testing(___)
-
-glimpse(d_na_train)
-glimpse(____)
-```
-
-```{r test-train-solution}
-set.seed(123)
-
-diabetes_split <- d_na %>%
-    initial_split(prop = 0.7, 
-                  strata = diabetes)
-
-d_na_train <- training(diabetes_split)
-d_na_test <- testing(diabetes_split)
 
 glimpse(d_na_train)
 glimpse(d_na_test)
@@ -356,9 +329,9 @@ Let's do some standard checks on the train/test split!
 -   Use `gglot()` to plot a histogram of the output (`diabetes`) to
     check we stratified appropriately.
 
-```{r strata, exercise=TRUE, exercise.blanks = "___+"}
+```{r strata, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 # check how many samples we have in training
-dim(____)
+____(d_na_train)
 
 # check how many samples we have in testing
 ____(d_na_test)
@@ -375,21 +348,6 @@ together %>%
   facet_grid(test_train~., scales = "free")
 ```
 
-```{r strata-solution}
-dim(d_na_train)
-
-dim(d_na_test)
-
-together <- bind_rows(train = d_na_train,
-                      test = d_na_test,
-                      .id = "test_train" ) 
-
-together %>%
-  ggplot(aes(x = diabetes))+
-  geom_bar()+
-  facet_grid(test_train~., scales = "free")
-```
-
 ### Preprocessing step for modeling
 
 In tidymodels, you can preprocess your data using **recipes**. Within a
@@ -402,15 +360,16 @@ data. When we do imputation, we aren't adding new information to our
 dataset, but we are using the patterns in our dataset so that we don't
 have to throw away the data that have some variables missing.
 
-**Instructions** Use the `recipe()` function to apply the following
-preprocessing steps:
+**Instructions**
 
+-   Use the `recipe()` function to apply the following preprocessing
+    steps;
 -   use the `step_impute_median()` function to perform median imputation
     on all predictors;
 -   normalize the data to a standard range by dividing each observation
     by the standard deviation of the feature using `step_normalize()`.
 
-```{r preprocessing, exercise=TRUE, exercise.blanks = "___+"}
+```{r preprocessing, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 set.seed(123)
 
 diabetes_rec <- ____(diabetes ~ ., data = d_na_train) %>%
@@ -420,21 +379,11 @@ diabetes_rec <- ____(diabetes ~ ., data = d_na_train) %>%
 diabetes_rec  
 ```
 
-```{r preprocessing-solution}
-set.seed(123)
-
-diabetes_rec <- recipe(diabetes ~ ., data = d_na_train) %>%
-                step_impute_median(all_numeric_predictors()) %>%
-                step_normalize(all_numeric_predictors()) 
-  
-diabetes_rec  
-```
-
 ### Resampling
 
 At some point we're going to want to do some *parameter tuning*
 (explained later), and to do that we're going to want to use
-**cross-validation**. So we can create a cross-validated version of the
+**cross-validation**. We can create a cross-validated version of the
 training set in preparation for that moment:
 
 **Instructions** You can use tidymodels functions to create the kind of
@@ -444,18 +393,10 @@ cross-validation repeated 5 times.
 -   The argument `v` specifies the number of folds for cross-validation;
 -   The argument `repeats` specifies the number of repeats.
 
-```{r folds, exercise=TRUE, exercise.blanks = "___+"}
+```{r folds, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 set.seed(123)
 
 diabetes_folds <- vfold_cv(d_na_train, ___ = 10, ___ = 5)
-
-glimpse(diabetes_folds)
-```
-
-```{r folds-solution}
-set.seed(123)
-
-diabetes_folds <- vfold_cv(d_na_train, v = 10, repeats = 5)
 
 glimpse(diabetes_folds)
 ```
@@ -591,11 +532,11 @@ must add `importance = 'impurity'` inside our `set_engine()` function:
     function and that the `mixture` and `penalty` hyperparameters need
     to be tuned.
 
-```{r models, exercise=TRUE, exercise.blanks = "___+"}
+```{r models, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 # random forest
 
 rf_model_diabetes <- 
-  rand_forest(mtry = ____,
+  rand_forest(mtry = tune(),
               ____ = tune(),
               min_n = ____) %>%
   # select the engine/package that underlies the model
@@ -606,27 +547,8 @@ rf_model_diabetes <-
 # logistic regression
 
 rlr_model_diabetes <- 
-  ____(____ = tune(), 
-               ____ = tune()) %>%
-  set_engine("glmnet") %>%
-  set_mode("classification")
-```
-
-```{r models-solution}
-# random forest
-
-rf_model_diabetes <- 
-  rand_forest(mtry = tune(),
-              trees = tune(),
-              min_n = tune()) %>%
-  set_engine("ranger", importance = "impurity") %>% 
-  set_mode("classification") 
-
-# logistic regression
-
-rlr_model_diabetes <- 
-  logistic_reg(mixture = tune(), 
-               penalty = tune()) %>%
+  ____(____ = ____, 
+       ____ = ____) %>%
   set_engine("glmnet") %>%
   set_mode("classification")
 ```
@@ -673,9 +595,10 @@ function and set a range for the hyperparameter with a numeric vector.
     resampling, requires fitting a lot of models! These models don't
     depend on one another and can be run in parallel.
 
-```{r tuning, exercise=TRUE, exercise.blanks = "___+", exercise.timelimit = 1000}
+```{r tuning, exercise=TRUE, error=TRUE, exercise.blanks = "___+", exercise.timelimit = 1000}
 set.seed(123)
 
+#create a random grid of values for the hyperparameters mtry(), trees() and min_n()
 rf_grid <- ____(mtry() %>% range_set(c(____, ____)),
                        trees(),
                        min_n(),
@@ -689,29 +612,7 @@ rf_tune_model <- ____(
   rf_model_diabetes,  #your model
   diabetes_rec,       #your recipe
   resamples = diabetes_folds, #your resampling
-  grid = ____,
-  control = grid_ctrl)
-
-rf_tune_model
-```
-
-```{r tuning-solution}
-set.seed(123)
-
-rf_grid <- grid_random(mtry() %>% range_set(c(3, 6)),
-                       trees(),
-                       min_n(),
-                       size = 10)
-
-#View grid
-rf_grid
-
-#Tune random forest model 
-rf_tune_model <- tune_grid(
-  rf_model_diabetes, 
-  diabetes_rec,       
-  resamples = diabetes_folds,
-  grid = rf_grid,
+  grid = ____, #your gird
   control = grid_ctrl)
 
 rf_tune_model
@@ -725,7 +626,7 @@ to:
 -   to see which model performed the best, in terms of the **"roc_auc"**
     metric.
 
-```{r besttuning, exercise=TRUE, exercise.blanks = "___+"}
+```{r besttuning, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 # extract all metrics from the cross-validation performance
 rf_tune_model %>%
   ____()
@@ -733,14 +634,6 @@ rf_tune_model %>%
 # see which model performed the best
 rf_tune_model %>%
   ____("roc_auc")
-```
-
-```{r besttuning-solution}
-rf_tune_model %>%
-  collect_metrics()
-
-rf_tune_model %>%
-  show_best("roc_auc")
 ```
 
 #### `data.frame()`
@@ -753,14 +646,8 @@ parameters to be tested.
 for the `mixture` and `penalty` hyperparameters, to use later for tuning
 our regularized logistic regression model:
 
-```{r dftuning, exercise=TRUE, exercise.blanks = "___+"}
+```{r dftuning, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 rlr_grid <- ____(mixture = seq(0, 1, 0.1),
-                       penalty = seq(0, 1, 0.1))
-rlr_grid
-```
-
-```{r dftuning-solution}
-rlr_grid <- data.frame(mixture = seq(0, 1, 0.1),
                        penalty = seq(0, 1, 0.1))
 rlr_grid
 ```
@@ -778,7 +665,7 @@ for each row of the `rlr_grid` tuning grid. Let's then use the
 `collect_metrics()` and `show_best()` functions to visualise our best
 tuning results for the **"roc_auc"** metric:
 
-```{r lrtuning, exercise=TRUE, exercise.blanks = "___+"}
+```{r lrtuning, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 set.seed(123)
 
 # hyperparameters tuning
@@ -798,23 +685,6 @@ rlr_tune_model %>%
   show_best(____)
 ```
 
-```{r lrtuning-solution}
-set.seed(123)
-
-rlr_tune_model <- tune_grid(
-  rlr_model_diabetes,  
-  diabetes_rec,       
-  resamples = diabetes_folds, 
-  grid = rlr_grid,
-  control = grid_ctrl)
-
-rlr_tune_model %>%
-  collect_metrics()
-
-rlr_tune_model %>%
-  show_best("roc_auc")
-```
-
 ## Compare models and preprocessing steps
 
 Tidymodels allows us to perform all of the above steps in a much faster
@@ -824,7 +694,7 @@ way with the **workflowsets** package.
 `rlr_model_diabetes` and `rf_model_diabetes` models with your
 `diabetes_rec` recipe:
 
-```{r workflowset, exercise=TRUE, exercise.blanks = "___+"}
+```{r workflowset, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 diabetes_wf_set <- ____(list(diabetes_rec),  #list of recipes
              list(rf_model_diabetes, ____), #list of models
              cross = TRUE) #all combinations of the preprocessors and models are used to create the workflows
@@ -833,16 +703,6 @@ diabetes_wf_set <- ____(list(diabetes_rec),  #list of recipes
 diabetes_wf_set$wflow_id
 
 # print the options for each id
-diabetes_wf_set$option
-```
-
-```{r workflowset-solution}
-diabetes_wf_set <- workflow_set(list(diabetes_rec),  
-             list(rf_model_diabetes, rlr_model_diabetes), 
-             cross = TRUE) 
-
-diabetes_wf_set$wflow_id
-
 diabetes_wf_set$option
 ```
 
@@ -855,18 +715,10 @@ workflows.
 Let's add our `rf_grid` and `rlr_grid` girds with the `option_add()`
 function:
 
-```{r workflowset_grid, exercise=TRUE, exercise.blanks = "___+"}
+```{r workflowset_grid, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 diabetes_wf_set <- diabetes_wf_set %>%
   option_add(grid=rf_grid, id="recipe_rand_forest") %>% #add the rf_grid
-  option_add(grid=____, id="recipe_logistic_reg")       #add the rlr_grid
-
-diabetes_wf_set$option
-```
-
-```{r workflowset_grid-solution}
-diabetes_wf_set <- diabetes_wf_set %>%
-  option_add(grid=rf_grid, id="recipe_rand_forest") %>%
-  option_add(grid=rlr_grid, id="recipe_logistic_reg")
+  ____(grid=____, id="recipe_logistic_reg")       #add the rlr_grid
 
 diabetes_wf_set$option
 ```
@@ -879,23 +731,12 @@ grids, so you will only need to add your resampling object to the
 > The first argument in the `workflow_map()` function is a function name
 > from the **tune** package (`tune_grid()`, `fit_resamples()`..)
 
-```{r workflowmap, exercise=TRUE, exercise.blanks = "___+", exercise.timelimit = 1000}
+```{r workflowmap, exercise=TRUE, error=TRUE, exercise.blanks = "___+", exercise.timelimit = 1000}
 set.seed(123)
 
 diabetes_wf_set <- diabetes_wf_set %>%
                    ____("tune_grid",
                    resamples = ____, 
-                   control = grid_ctrl,
-                   verbose = TRUE) 
-diabetes_wf_set
-```
-
-```{r workflowmap-solution}
-set.seed(123)
-
-diabetes_wf_set <- diabetes_wf_set %>%
-                   workflow_map("tune_grid",
-                   resamples = diabetes_folds,
                    control = grid_ctrl,
                    verbose = TRUE) 
 diabetes_wf_set
@@ -910,18 +751,12 @@ how well these models classified the data using the `rank_results()` and
 your tuned workflows. You specifically want to have a look at the
 `"roc_auc"` metric:
 
-```{r autoplot, exercise=TRUE, exercise.blanks = "___+"}
+```{r autoplot, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 #to get the rankings of the models (and their tuning parameter sub-models) as a data frame:
 rank_results(diabetes_wf_set, rank_metric = ____)
 
 #to plot the results
 autoplot(____, metric = "roc_auc")
-```
-
-```{r autoplot-solution}
-rank_results(diabetes_wf_set, rank_metric = "roc_auc")
-
-autoplot(diabetes_wf_set, metric = "roc_auc")
 ```
 
 ## Extract best tuning results
@@ -935,18 +770,10 @@ for each model. We can use the `extract_workflow_set_result()` and
 -   Extract the tuning results for the `"recipe_logistic_reg"` workflow;
 -   Select the best results for the `**roc_auc**` metric.
 
-```{r best, exercise=TRUE, exercise.blanks = "___+"}
+```{r best, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 best_results <- diabetes_wf_set %>%
   extract_workflow_set_result(____) %>%
   ____(metric="roc_auc")
-
-best_results
-```
-
-```{r best-solution}
-best_results <- diabetes_wf_set %>%
-  extract_workflow_set_result("recipe_logistic_reg") %>%
-  select_best(metric="roc_auc")
 
 best_results
 ```
@@ -968,26 +795,13 @@ the training data, and produce evaluations based on the test set.
 -   Fit to the training set and evaluate on the testing set using
     `last_fit()`.
 
-```{r update, exercise=TRUE, exercise.blanks = "___+", exercise.timelimit=800}
+```{r update, exercise=TRUE, error=TRUE, exercise.blanks = "___+", exercise.timelimit=1000}
 set.seed(123)
 
 final_diabetes_fit <- diabetes_wf_set %>%
   ____("recipe_logistic_reg") %>%
   finalize_workflow(____) %>%
   ____(diabetes_split)
-
-final_diabetes_fit
-
-final_diabetes_fit %>% collect_metrics()
-```
-
-```{r update-solution}
-set.seed(123)
-
-final_diabetes_fit <- diabetes_wf_set %>%
-  extract_workflow("recipe_logistic_reg") %>%
-  finalize_workflow(best_results) %>%
-  last_fit(diabetes_split)
 
 final_diabetes_fit
 
@@ -1020,7 +834,8 @@ curve. For a perfect classifier, AUC = 1, for a random guess, AUC=0.5.
 Objective: maximize.
 
 ![A Reciever Operator Characteristic (ROC) curve, from which the Area
-Under the Curve (AUC) can be calculated](images/_CatArea.jpg){width="80%"}
+Under the Curve (AUC) can be
+calculated](images/_CatArea.jpg){width="80%"}
 
 A **confusion matrix** is a matrix that compares "the truth" to the
 labels generated by your classifier. When we label a cat correctly, we
@@ -1036,10 +851,10 @@ this:
 -   false positive **(FP)**: Healthy incorrectly identified as diabetic
 -   false negative **(FN)**: Diabetic incorrectly identified as healthy
 
-![](images/_CatConfusion.jpg){width="80%"} 
+![](images/_CatConfusion.jpg){width="80%"}
 
-We can plot the ROC curve to visualize
-test set performance of our model, and generate a confusion matrix.
+We can plot the ROC curve to visualize test set performance of our
+model, and generate a confusion matrix.
 
 *Note In R, factor levels are ordered alphabetically by default, which
 means that "no" comes first before "yes" and is considered the level of
@@ -1053,9 +868,9 @@ alter this as needed.*
 -   Plot a ROC curve with the `roc_curve()` function;
 -   Plot a confusion matrix with the `conf_mat()` function.
 
-```{r roc, exercise=TRUE, exercise.blanks = "___+"}
+```{r roc, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
 #ROC curve
-  collect_predictions(final_diabetes_fit) %>%
+  ____(final_diabetes_fit) %>% #extract the prediction values from your final fit object
   ____(diabetes, event_level="second", .pred_pos) %>%  #specify which level of truth to consider as the "event"
                 autoplot()
 
@@ -1071,30 +886,17 @@ conf_matrix_rf %>%
   autoplot()
 ```
 
-```{r roc-solution}
-  collect_predictions(final_diabetes_fit) %>%
-  roc_curve(diabetes, event_level="second", .pred_pos) %>%
-                autoplot()
-
-conf_matrix_rf <- final_diabetes_fit %>%
-  collect_predictions() %>%
-  conf_mat(truth = diabetes, estimate = .pred_class) 
-
-conf_matrix_rf
-
-conf_matrix_rf %>%
-  autoplot()
-```
-
 ## Variable importance
 
-In order to visualize the variable importance scores of our  model, we will need to:
+In order to visualize the variable importance scores of our model, we
+will need to:
 
--   manually train our workflow object with the `fit()` function on the training data;
+-   manually train our workflow object with the `fit()` function on the
+    training data;
 -   extract the trained model with the `pull_workflow_fit()` function;
 -   pass the trained model to the `vip()` function.
 
-```{r vip, exercise=TRUE, exercise.blanks = "___+", exercise.timelimit=800}
+```{r vip, exercise=TRUE, error=TRUE, exercise.blanks = "___+", exercise.timelimit=1000}
 #extract the final workflow
 final_workflow <- diabetes_wf_set %>%
   extract_workflow("recipe_logistic_reg") %>%
@@ -1112,16 +914,16 @@ wf_fit <- wf_fit %>%
 ____(wf_fit)
 ```
 
-```{r vip-solution}
-final_workflow <- diabetes_wf_set %>%
-  extract_workflow("recipe_logistic_reg") %>%
-  finalize_workflow(best_results)
+This returns a ggplot object with the variable importance scores from
+our model.
 
-wf_fit <- final_workflow %>%
-  fit(data = d_na_train)
+We see from the results below, that the glucose concentration, body mass
+index and age are the most important predictors of diabetes.
 
-wf_fit <- wf_fit %>% 
-          pull_workflow_fit()
+Often you will need to consider a large number of possible modeling
+approaches for a task at hand, especially for new data sets and/or when
+there is little knowledge about what modeling strategy will work best.
+Today you have practived how to use workflow sets to investigate
+multiple models or feature engineering strategies in such a situation.
 
-vip(wf_fit)
-```
+Well done `r emojifont::emoji('star')`!
