@@ -312,7 +312,7 @@ glimpse(d_na_test)
 
 The code above takes an input data set and puts 70% of it into a
 training dataset and 30% of it into a testing dataset; it chooses the
-individual cases so that both sets are balanced in selling price.
+individual cases so that both sets are balanced in the `diabetes` variable.
 
 *Stratified sampling would split within each quartile. This ensures that
 the training and testing sets have a similar distribution of the target
