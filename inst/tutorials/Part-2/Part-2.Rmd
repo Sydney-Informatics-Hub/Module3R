@@ -312,7 +312,8 @@ glimpse(d_na_test)
 
 The code above takes an input data set and puts 70% of it into a
 training dataset and 30% of it into a testing dataset; it chooses the
-individual cases so that both sets are balanced in the `diabetes` variable.
+individual cases so that both sets are balanced in the `diabetes`
+variable.
 
 *Stratified sampling would split within each quartile. This ensures that
 the training and testing sets have a similar distribution of the target
@@ -326,7 +327,7 @@ Let's do some standard checks on the train/test split!
     training (`d_na_train`) and testing (`d_na_test`) sets;
 -   Use `bind_rows()` to bind together the rows of the training and
     testing sets;
--   Use `gglot()` to plot a histogram of the output (`diabetes`) to
+-   Use `ggplot()` to plot a histogram of the output (`diabetes`) to
     check we stratified appropriately.
 
 ```{r strata, exercise=TRUE, error=TRUE, exercise.blanks = "___+"}
@@ -633,7 +634,7 @@ rf_tune_model %>%
 
 # see which model performed the best
 rf_tune_model %>%
-  ____("roc_auc")
+  ____(metric = "roc_auc")
 ```
 
 #### `data.frame()`
@@ -897,6 +898,8 @@ will need to:
 -   pass the trained model to the `vip()` function.
 
 ```{r vip, exercise=TRUE, error=TRUE, exercise.blanks = "___+", exercise.timelimit=1000}
+set.seed(123)
+
 #extract the final workflow
 final_workflow <- diabetes_wf_set %>%
   extract_workflow("recipe_logistic_reg") %>%
