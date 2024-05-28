@@ -184,7 +184,6 @@ zoo
 ```
 
 Alternatively, use the `glimpse()` function to see columns in a more compact way.
-You can click on the **Solution** button to get help.
 
 ```{r glimpse-zoo, exercise=TRUE, warning=FALSE, message=FALSE, error=FALSE}
 glimpse(___)
