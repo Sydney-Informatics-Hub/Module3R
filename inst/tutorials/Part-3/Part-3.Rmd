@@ -190,10 +190,6 @@ You can click on the **Solution** button to get help.
 glimpse(___)
 ```
 
-```{r glimpse-zoo-solution}
-glimpse(zoo)
-```
-
 We can see that `zoo` has `r nrow(zoo)` rows and `r ncol(zoo)` columns, two of them (`animal_name` and `animal_type`) are characters.
 Let's count the number animals for each `animal_type`.
 
