@@ -1,5 +1,5 @@
 ---
-title: "Getting Started with Machine Learning in R - Part 3"
+title: "Getting Started with Machine Learning in R - Unsupervised ML"
 output: 
   learnr::tutorial:
     progressive: true
@@ -27,6 +27,8 @@ library(finetune)
 library(tune)
 library(glmnet)
 library(ranger)
+source("plot_top_loadings.R")
+source("get_loading_data.R")
 theme_set(theme_minimal())
 
 knitr::opts_chunk$set(echo = FALSE)
@@ -200,11 +202,6 @@ zoo %>%
   count(___)
 ```
 
-```{r cnt-type-solution}
-zoo %>% 
-  count(animal_type)
-```
-
 While looking at the numbers helps, plotting is always a good idea to get an overall view of the data, especially if many sub-categories are present.
 
 **Instructions** Plot the number of animals in each `animal_type` category.
@@ -217,49 +214,26 @@ zoo %>%
   theme_minimal()
 ```
 
-```{r type-bar-solution}
-zoo %>%
-  ggplot(aes(animal_type)) +
-  geom_bar(fill="#CA225E") +
-  theme_minimal()
-```
-
 We can also look at the distribution of animals that lay `eggs` across `animal_type`.
 *Note*: The `eggs` column is coded in `0` and `1` for animals that `"doesn't lay eggs"` and `"lay eggs"` respectively.
 Let's do some data wrangling with the `recode()` function to plot it neatly.
-Click on **Solution** if you are stuck.
 
 ```{r type-eggs-bar, exercise=TRUE}
 zoo %>%
   mutate(eggs = recode(eggs, 0=___, 1=___)) %>%
   ggplot(aes(___, fill=___)) +
-  geom___() +
+  geom_bar() +
   scale_fill_manual(values = c("#372F60", "#CA225E")) +
   theme_minimal() +
   theme(legend.position = "top")
 ```
 
-```{r type-eggs-bar-solution}
-zoo %>%
-  mutate(eggs = recode(eggs, `0`="doesn't lay eggs", `1`="lays Eggs" )) %>%
-  ggplot(aes(animal_type, fill=eggs)) +
-  geom_bar() +
-  scale_fill_manual(values = c("#372F60", "#CA225E")) + 
-  theme_minimal() +
-  theme(legend.position = "top")
-```
-
-Not so surprisingly there are very few mammals that lay eggs.
+Not so surprisingly there are very few mammals (`animal_type`) that lay eggs (`eggs`).
 Let's get the actual count.
 
 ```{r cnt-type-eggs, exercise=TRUE}
 zoo %>% 
   count(___, ___)
-```
-
-```{r cnt-type-eggs-solution}
-zoo %>% 
-  count(animal_type, eggs)
 ```
 
 It looks like there is one mammal that lays eggs!
@@ -270,13 +244,6 @@ zoo %>%
   filter(animal_type == ____,
          eggs == ____) %>%
   # select relevant columns for a compact view
-  select(animal_name, animal_type, eggs) 
-```
-
-```{r find-eggs-solution, eval=FALSE}
-zoo %>%
-  filter(animal_type == "mammal",
-         eggs == 1) %>%
   select(animal_name, animal_type, eggs) 
 ```
 
@@ -304,21 +271,6 @@ zooCor_pvalues <- cor_pmat(____)
 ggcorrplot(____,
            type = "lower", 
            p.mat = ____)
-```
-
-```{r correlation-solution}
-numVars <- zoo %>% 
-  select_if(is.numeric) %>%
-  names()
-
-zooCor <- cor(zoo[,numVars],
-                      use = "pairwise.complete.obs")
-
-zooCor_pvalues <- cor_pmat(zooCor)
-
-ggcorrplot(zooCor,
-           type = "lower", 
-           p.mat = zooCor_pvalues)
 ```
 
 We can see that producing eggs or milk have a very strong negative correlation.
@@ -367,7 +319,7 @@ We can also create a cross-validated version of the training set in preparation 
 
 **Instructions**
 
--   Use the `initial_split()` function to create a data split that divides the original data into 80%/20% sections and (roughly) divides the data into subsets based on the target/outcome variable's distribution;
+-   Use the `initial_split()` function to create a data split that divides the original data into 80%/20% sections ;
 -   Use the functions `training()` and `testing()` to assign the 80% partition to `zoo_train` and the 20% partition to `zoo_test`, respectively;
 -   Use the `vfold_cv()` function 10-fold cross-validation repeated 5 times.
 
@@ -386,20 +338,6 @@ glimpse(zoo_train)
 glimpse(zoo_test)
 ```
 
-```{r test-train-solution}
-set.seed(123)
-
-zoo_split <- zoo %>%
-    initial_split(prop = 0.8)
-
-zoo_train <- training(zoo_split)
-zoo_test <- testing(zoo_split)
-zoo_folds <- vfold_cv(zoo_train, v = 10, repeats = 5)
-
-glimpse(zoo_train)
-glimpse(zoo_test)
-```
-
 ### Preprocessing steps
 
 Let's implement principal component analysis (PCA) using [recipes](https://recipes.tidymodels.org/).
@@ -408,10 +346,6 @@ Let's implement principal component analysis (PCA) using [recipes](https://recip
 
 ```{r recstart, exercise=TRUE}
 pca_rec <- recipe( ~ ., data = ___) # use all the variables  
-```
-
-```{r recstart-solution}
-pca_rec <- recipe( ~ ., data = zoo_train) 
 ```
 
 Once we initiate the recipe, we can keep adding new [roles](https://tidymodels.github.io/recipes/reference/roles.html) and **steps**.
@@ -426,21 +360,11 @@ pca_rec <- recipe(~., data = zoo_train) %>%
   update_role(___, ___, new_role = "id")
 ```
 
-```{r role-solution}
-pca_rec <- recipe(~., data = zoo_train) %>%
-  update_role(animal_name, animal_type, new_role = "id")
-```
-
 Try using `summary` to see the defined roles in `pca_rec` and arrange them by `role` column.
 
 ```{r role-sum, exercise=TRUE}
-summary() %>%
+summary(___) %>%
   arrange(___)
-```
-
-```{r role-sum-solution}
-summary(pca_rec) %>%
-  arrange(role)
 ```
 
 We can see that the role of `animal_name` and `animal_type` is now defined as `id` and the remaining variables are listed as `predictor`.
@@ -462,13 +386,6 @@ pca_rec <- recipe(~., data = zoo_train) %>%
   # add steps to scale and center
   step____(all_predictors()) %>%
   step____(all_predictors())
-```
-
-```{r step-norm-solution}
-pca_rec <- recipe(~., data = zoo_train) %>%
-  update_role(animal_name, animal_type, new_role = "id") %>%
-  step_scale(all_predictors()) %>%
-  step_center(all_predictors())
 ```
 
 Alternatively, we can accomplish scaling and centering in one single step.
@@ -497,14 +414,6 @@ pca_rec <- recipe(~., data = zoo_train) %>%
   step_center(all_predictors()) %>%
   # add step for PCA computation
   step____(___, id = "pca")
-```
-
-```{r pca-step-solution}
-pca_rec <- recipe(~., data = zoo_train) %>%
-  update_role(animal_name, animal_type, new_role = "id") %>%
-  step_scale(all_predictors()) %>%
-  step_center(all_predictors()) %>%
-  step_pca(all_predictors(), id = "pca")
 ```
 
 Did you notice the additional argument `id = "pca"` there?
@@ -537,11 +446,6 @@ pca_prep <- prep(___)
 pca_prep
 ```
 
-```{r pca-prep-solution}
-pca_prep <- prep(pca_rec)
-pca_prep
-```
-
 Can you see the difference between the outputs of `pca_rec` and `pca_prep`?
 After *prepping* we can see that scaling and centering, and PCA extraction with all columns of interest has been *trained*.
 
@@ -551,36 +455,24 @@ Let's take a look at the steps this recipe contains with `tidy()`:
 tidy(___)
 ```
 
-```{r tidy-prep-solution}
-tidy(pca_prep)
-```
-
 We can see that three steps are contained in this prepped recipe:
 
-1.  `scale`\
+1.  `scale`
 2.  `center`
 3.  `pca`
 
 With `tidy()` we can extract the *intermediate values* computed in each step by providing its `number` as an argument to `tidy()`.
 
-For example, you can extract the mean values for each *predictor* variable from the second step of our recipe (`center`) using the `tidy` method:
+For example, you can extract the mean values for each *predictor* variable from the second step of our recipe (*center*) using the `tidy` method:
 
 ```{r tidy-cen, exercise=TRUE}
-tidy(___, ___)
-```
-
-```{r tidy-cen-solution}
-tidy(pca_prep, 2)
+tidy(pca_prep, ___)
 ```
 
 Using the same method, we can also extract the variable *loadings* for each component from our `step_pca`:
 
 ```{r tidy-pca, exercise=TRUE}
 tidy(___, ___)
-```
-
-```{r tidy-pca-solution}
-tidy(pca_prep, 3)
 ```
 
 > You can see that these *underlying values* can be different for each step, but are always called `values` when extracted with the `tidy` method.
@@ -595,12 +487,6 @@ tidy(pca_prep, 3)
 
 ```{r tidy-pca-id, exercise=TRUE}
 pca_loading <- tidy(___, id = ___, type = ___)
-
-pca_loading
-```
-
-```{r tidy-pca-id-solution}
-pca_loading <- tidy(pca_prep, id = "pca", type = "coef")
 
 pca_loading
 ```
@@ -620,13 +506,7 @@ The `plot_top_loadings()` takes three arguments:
 **Instructions** Fill in the blanks to plot the *first four* principle components and *top six* variables with largest absolute loadings:
 
 ```{r load-plot, exercise = TRUE}
-plot_top_loadings(___, component_number ___, n = ___) + 
-  scale_fill_manual(values = c("#372F60", "#CA225E")) +
-  theme_minimal()
-```
-
-```{r load-plot-solution}
-plot_top_loadings(pca_prep, component_number <= 4, n = 6) + 
+plot_top_loadings(___, component_number <= ___, n = ___) + 
   scale_fill_manual(values = c("#372F60", "#CA225E")) +
   theme_minimal()
 ```
@@ -647,16 +527,11 @@ So far we:
 
 **Instructions** In order to apply these computations to our data and extract the principal components, we will use the `bake()` by providing two arguments:
 
--   A prepped (trained) recipe;\
+-   A prepped (trained) recipe;
 -   The data we would like to apply these computations to.
 
 ```{r bake, exercise=TRUE}
 pca_bake <- bake(___, ___)
-pca_bake
-```
-
-```{r bake-solution}
-pca_bake <- bake(pca_prep, zoo)
 pca_bake
 ```
 
@@ -669,15 +544,6 @@ Let's plot the first two principal components, while labeling our points with `a
 pca_bake %>%
   ggplot(aes(___, ___, label=___)) +
   geom_point(aes(color = ___), alpha = 0.7, size = 2)+
-  geom_text(check_overlap = TRUE, hjust = "inward") +
-  labs(color = NULL) +
-  theme_minimal()
-```
-
-```{r pca-plot-solution}
-pca_bake %>%
-  ggplot(aes(PC1, PC2, label=animal_name)) +
-  geom_point(aes(color = animal_type), alpha = 0.7, size = 2)+
   geom_text(check_overlap = TRUE, hjust = "inward") +
   labs(color = NULL) +
   theme_minimal()
@@ -704,21 +570,11 @@ pca_variances <- tidy(pca_prep, id = "pca", type = "variance")
 pca_variances
 ```
 
-```{r var-exp1-solution}
-pca_variances <- tidy(pca_prep, id = "pca", type = "variance")
-pca_variances
-```
-
 **Instructions** Take a close look at the `terms` column of `pca_variances`and see that various variance calculations are available for our 16 principal components.
 
 ```{r var-exp2, exercise=TRUE}
 pca_variances %>%
   count(___)
-```
-
-```{r var-exp2-solution}
-pca_variances %>%
-  count(terms)
 ```
 
 Now, let's plot the `component` and the `value` to help our brains out once more:
@@ -733,18 +589,9 @@ pca_variances %>%
   theme_minimal()
 ```
 
-```{r var-plot-solution}
-pca_variances %>%
-  filter(terms == "percent variance") %>%
-  ggplot(aes(component, value)) +
-  geom_col(fill="#372F60") +
-  labs(x = "Principal Components", y = "Variance explained (%)") +
-  theme_minimal()
-```
-
 We can see that first three principal components explain majority of the variance in the data.
 But it is difficult to see the cumulative variance explained in this plot.
-Let's tweak the `filter()` function to plot the cumulative variance explained:
+Let's tweak the `filter()` function to plot the cumulative variance ("cumulative percent variance") explained:
 
 ```{r cum-var-plot, exercise=TRUE}
 pca_variances %>%
@@ -752,15 +599,6 @@ pca_variances %>%
   ggplot(aes(___, ___)) +
   geom_col(fill="#372F60") +
   scale_y_continuous() +
-  labs(x = "Principal Components", y = "Cumulative variance explained (%)") +
-  theme_minimal()
-```
-
-```{r cum-var-plot-solution}
-pca_variances %>%
-  filter(terms == "cumulative percent variance") %>%
-  ggplot(aes(component, value)) +
-  geom_col(fill="#372F60") +
   labs(x = "Principal Components", y = "Cumulative variance explained (%)") +
   theme_minimal()
 ```
@@ -773,17 +611,8 @@ Try plotting PC1 and PC3, do you see other clusters in the data that wasn't as o
 
 ```{r pca3-plot, exercise=TRUE}
 pca_bake %>%
-  ggplot(aes(___, ___, label=___)) +
-  geom_point(aes(color = ___), alpha = 0.7, size = 2)+
-  geom_text(check_overlap = TRUE, hjust = "inward") +
-  labs(color = NULL) +
-  theme_minimal()
-```
-
-```{r pca3-plot-solution}
-pca_bake %>%
-  ggplot(aes(PC1, PC3, label=animal_name)) +
-  geom_point(aes(color = animal_type), alpha = 0.7, size = 2)+
+  ggplot(aes(___, ___, label=___)) + 
+  geom_point(aes(color = ___), alpha = 0.7, size = 2) + 
   geom_text(check_overlap = TRUE, hjust = "inward") +
   labs(color = NULL) +
   theme_minimal()
@@ -823,23 +652,6 @@ rf_spec <- ____(trees = ____) %>%
   set_engine("ranger")
 ```
 
-```{r models-solution}
-# multinomial model
-
-multi_model_zoo <- multinom_reg(
-  mode = "classification",
-  engine = "glmnet",
-  penalty = tune(),
-  mixture = tune()
-)
-
-# random forest
-
-rf_spec <- rand_forest(trees = 1000) %>%
-  set_mode("classification") %>%
-  set_engine("ranger")
-```
-
 We also need recipes for the dimensionality reduction method.
 Let's start with a base recipe `base_rec` and then extend it with a dimensionality reduction step.
 
@@ -862,21 +674,6 @@ rec_pca <- recipe(___ ~ ., data = ___) %>%
   step_normalize(all_predictors()) %>%
   step_dummy(all_nominal_predictors(), one_hot = FALSE) %>%
   ___(all_numeric_predictors(), num_comp = ___)
-```
-
-```{r recstart2-solution}
-#your basic recipe
-
-base_rec <- recipe(animal_type ~ ., data = zoo_train) %>% 
-  step_normalize(all_numeric_predictors()) %>%
-  step_dummy(all_nominal_predictors(), one_hot = FALSE) 
-
-#your pca recipe
-
-rec_pca <- recipe(animal_type ~ ., data = zoo_train) %>% 
-  step_normalize(all_numeric_predictors()) %>%
-  step_dummy(all_nominal_predictors(), one_hot = FALSE) %>%
-  step_pca(all_numeric_predictors(), num_comp = tune())
 ```
 
 Once again, the **workflowsets** package takes the preprocessors and models and crosses them.
@@ -905,43 +702,10 @@ zoo_wf_set_tuning <- zoo_wf_set %>%
 
 ```
 
-```{r workflowset-solution}
-set.seed(123)
-
-zoo_wf_set <- workflow_set(list(basic = base_rec, pca = rec_pca),  
-             list(multi = multi_model_zoo, rf = rf_spec), 
-             cross = TRUE) 
-
-zoo_wf_set_tuning <- zoo_wf_set %>%
-                   workflow_map("tune_grid",
-                   resamples = zoo_folds,
-                   control = grid_ctrl, 
-                   grid = 10, 
-                   metrics = metric_set(roc_auc),
-                   verbose = TRUE)
-```
-
 We can rank the models by their training set estimates of the area under the ROC curve.
 Run the following code to have a look at this:
 
 ```{r run, exercise=TRUE}
-rankings <- 
-  rank_results(zoo_wf_set_tuning, select_best = TRUE) %>% 
-  mutate(method = map_chr(wflow_id, ~ str_split(.x, "_", simplify = TRUE)[1])) 
-
-tidymodels_prefer()
-filter(rankings, rank <= 5) %>% dplyr::select(rank, mean, model, method)
-
-rankings %>% 
-  ggplot(aes(x = rank, y = mean, pch = method, color = model)) + 
-  geom_point(cex = 3.5) + 
-  theme(legend.position = "right") +
-  labs(y = "ROC AUC")  +
-  geom_text(aes(y = mean - 0.01, label = wflow_id), angle = 90, hjust = 1) +
-  lims(y = c(0.9, NA))
-```
-
-```{r run-solution}
 rankings <- 
   rank_results(zoo_wf_set_tuning, select_best = TRUE) %>% 
   mutate(method = map_chr(wflow_id, ~ str_split(.x, "_", simplify = TRUE)[1])) 
@@ -982,29 +746,11 @@ zoo_res <-
            control = control_last_fit(allow_par = TRUE))
 ```
 
-```{r last_fit-solution}
-zoo_res <- 
-  zoo_wf_set_tuning %>% 
-  extract_workflow("basic_multi") %>% 
-  finalize_workflow(
-    zoo_wf_set_tuning %>% 
-      extract_workflow_set_result("basic_multi") %>% 
-      select_best(metric = "roc_auc") 
-  ) %>% 
-  last_fit(split = zoo_split, 
-           metrics = metric_set(roc_auc),
-           control = control_last_fit(allow_par = TRUE))
-```
-
 What are the results for our metric (multiclass ROC AUC) on the testing set?
 Do you remember which function we can use to extract this information?
 
 ```{r res, exercise=TRUE, exercise.blanks = "___+", warning=FALSE}
 ____(zoo_res)
-```
-
-```{r res-solution}
-collect_metrics(zoo_res)
 ```
 
 ## BONUS
@@ -1045,19 +791,6 @@ zoo_bake <- bake(___, ___)
 zoo_bake
 ```
 
-```{r juice-1-solution}
-zoo_rec <- recipe(data = zoo, formula = ~.) %>%
-  update_role(animal_name, animal_type, new_role = "id") %>%
-  step_normalize(all_predictors()) %>%
-  step_pca(all_predictors())
-
-zoo_prep <- prep(zoo_rec)
-
-# bake
-zoo_bake <- bake(zoo_prep, zoo)
-zoo_bake
-```
-
 Now, let's juice!
 `r emojifont::emoji('tropical_drink')`
 
@@ -1067,21 +800,11 @@ zoo_juice <- juice(___)
 zoo_juice
 ```
 
-```{r juice-2-solution}
-# juice
-zoo_juice <- juice(zoo_prep)
-zoo_juice
-```
-
 Do you see any difference in the output between bake or juice?
 Let's compare them with base R function `all.equal()`, which simply returns `TRUE` if the compared objects are identical:
 
 ```{r comp-juice-bake, exercise = TRUE}
 all.equal(___, ___)
-```
-
-```{r comp-juice-bake-solution}
-all.equal(zoo_bake, zoo_juice)
 ```
 
 > Congratulations!
