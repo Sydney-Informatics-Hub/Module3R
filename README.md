@@ -7,8 +7,8 @@ Learn Machine Learning in the browser or locally in your RStudio IDE with intera
 You can install the development version from [GitHub](https://github.com/) with:
 
 ``` r
-# install.packages("devtools")
-devtools::install_github("Sydney-Informatics-Hub/Module3R")
+# install.packages("remotes")
+remotes::install_github("Sydney-Informatics-Hub/Module3R")
 ```
 
 ## How to run the tutorials
